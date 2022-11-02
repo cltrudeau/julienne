@@ -75,8 +75,16 @@ class Line:
             self.content = content[:index].rstrip()
 
     def get_content(self, chapter):
-        # if in range
-        return self.content
+        print(self.content, self.conditional, self.lower, self.upper)
 
-        # not in range
-        return ''
+        # Check if the line should be included, any of:
+        #   * not a conditional statement
+        #   * chapter is larger than lower and there is no upper bound
+        #   * chapter value is between lower and upper bounds
+        if not self.conditional or \
+                (self.upper == -1 and self.lower <= chapter) or \
+                (self.lower <= chapter <= self.upper):
+            return self.content
+
+        # Line not in chapter range
+        return None

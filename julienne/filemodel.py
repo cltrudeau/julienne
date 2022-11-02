@@ -1,5 +1,7 @@
 from math import log, ceil
 from pathlib import Path
+import shutil
+
 import tomli
 
 from julienne.parser import Line
@@ -13,12 +15,9 @@ class DirNode:
         self.children = []
 
     def copy(self, chapter, base_path, output_path):
-        print(f"DirNode, kids={len(self.children)}")
-        print(f"  {self.path}")
-
         rel = self.path.relative_to(base_path)
         new_dir = output_path / rel
-        print("   mkdir ", new_dir)
+        new_dir.mkdir(parents=True, exist_ok=True)
 
 
 class CopyOnlyFileNode:
@@ -30,9 +29,8 @@ class CopyOnlyFileNode:
         rel = self.path.relative_to(base_path)
         dest = output_path / rel
 
-        print(f"CopyOnlyFileNode {rel}")
-        print(f"   from {self.path}")
-        print(f"     to {dest}")
+        shutil.copy(self.path, dest)
+
 
 class FileNode:
 
@@ -73,14 +71,15 @@ class FileNode:
 
     def copy(self, chapter, base_path, output_path):
         rel = self.path.relative_to(base_path)
-        print("FileNode", f"{rel} Range: {self.lowest}-{self.highest}")
 
         if self.lowest <= chapter <= self.highest:
+            # Write file if within chapter range
             dest = output_path / rel
-            print(f"   from {self.path}")
-            print(f"     to {dest}")
-        else:
-            print(f"   skipping {chapter=}")
+            with open(dest, "w") as f:
+                for line in self.lines:
+                    content = line.get_content(chapter)
+                    if content is not None:
+                        f.write(content + "\n")
 
 # ===========================================================================
 # Node Tree Traversal Methods
@@ -180,6 +179,6 @@ def generate_files(config_file):
     parent_path = base_dir.parent
 
     for num in range(1, biggest + 1):
-        print(30*'-', f"{num=}")
+        print(f'Creating chapter {num}')
         output_path = output_dir / Path(f"ch{num:0{digits}}")
         _traverse(root, 'copy', num, parent_path, output_path)
