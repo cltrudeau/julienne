@@ -254,12 +254,13 @@ def generate_files(config_file):
     # DEBUG:
     #_traverse(3, root, 'info')
 
-    # !!! Generate output goes here
+    ### Generate output
+    parent_path = base_dir.parent
     biggest = _find_biggest(root)
     digits = int(ceil(log(biggest+1, 10)))
-    parent_path = base_dir.parent
 
     prefix = config.get('chapter_prefix', 'ch')
+    chapter_map = config.get('chapter_map', {})
 
     # DEBUG: uncomment to generate a specific chapter
     #num = 5
@@ -268,5 +269,15 @@ def generate_files(config_file):
 
     for num in range(1, biggest + 1):
         print(f'Creating chapter {num}')
-        output_path = output_dir / Path(f"{prefix}{num:0{digits}}")
+
+        # If this chapter number is in the map, use the mapped suffix instead
+        if str(num) in chapter_map:
+            # Filename based on mapped suffix
+            filename = f"{prefix}{chapter_map[str(num)]}"
+        else:
+            # Filename based on chapter number, padded based on largest number
+            filename = f"{prefix}{num:0{digits}}"
+
+        # Call the "copy" command, traversing the tree to generate the output
+        output_path = output_dir / Path(filename)
         _traverse(num, root, 'copy', num, parent_path, output_path)

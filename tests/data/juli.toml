@@ -1,5 +1,10 @@
 output_dir = 'last_output'
 src_dir = 'sample'
+chapter_prefix = "chap"
+
+[chapter_map]
+4 = 'Four'
+5 = '5.0'
 
 [subdir.foo]
 range = '2-4'
