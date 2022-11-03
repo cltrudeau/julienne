@@ -50,9 +50,9 @@ your code.
 
 The ``juli`` parser supports three conditional comment markers:
 
-* **``#:``** -- is for marking a single line with a range of chapters
-* **``#::``** -- is for marking the start of a conditional block
-* **``#>``** -- is for marking a line participating in a block
+* ``#:`` -- is for marking a single line with a range of chapters
+* ``#::`` -- is for marking the start of a conditional block
+* ``#>`` -- is for marking a line participating in a block
 
 The ``#:`` and ``#::`` markers expect a range that indicates what chapters a
 line or block participates within. Ranges can indicate a single chapter, a
@@ -204,5 +204,5 @@ following:
     last_output/chap5.0/code/after4/later_on.txt
 
 The ``script.py`` and ``two_to_four.py`` files will be processed for
-conditional content. The ``readme.txt` and ``later_on.txt`` files will be
+conditional content. The ``readme.txt`` and ``later_on.txt`` files will be
 straight copies as they aren't covered by the Python glob.
