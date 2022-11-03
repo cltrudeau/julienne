@@ -60,15 +60,20 @@ class ParserTestCase(TestCase):
 
         # Test lower open range conditional line
         text = 'c = "In chapters 1-2"   #:-2'
-        expected = 'c = "In chapters 1-2"'
+        expected = 'c = "In chapters 1-2"   '
         line = Line(text)
         self.assertLine(line, True, False, expected, 1, 2)
 
         # Test upper open range conditional line
         text = 'd = "In chapters 2 on"  #:2-'
-        expected = 'd = "In chapters 2 on"'
+        expected = 'd = "In chapters 2 on"  '
         line = Line(text)
         self.assertLine(line, True, False, expected, 2, -1)
+
+    def test_bad_parsing(self):
+        text = 'x = 3 #:'
+        with self.assertRaises(ValueError):
+            Line(text)
 
     def test_block_parsing(self):
         #--- Test a conditional block
@@ -79,7 +84,7 @@ class ParserTestCase(TestCase):
 
         # Block header line has no comment, should be empty
         self.assertIsNotNone(lines[0].block_header)
-        self.assertEqual('', lines[0].content)
+        self.assertIsNone(lines[0].content)
 
         expected = 'e = "In chapters 3 to 4"  # inline comment'
         self.assertLine(lines[1], True, True, expected, 3, 4)

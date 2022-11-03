@@ -74,7 +74,7 @@ class Line:
                 # No space after marker, ignore this line
                 token = marker[3:]
                 self.content = None
-        elif marker.startswith('#:'):
+        else: # marker is a line marker, just "#:"
             try:
                 token, rest = marker[2:].split(' ', 1)
                 self.content = f"{content[:index]}# {rest}"
@@ -82,10 +82,12 @@ class Line:
                 # No space after marker
                 token = marker[2:]
                 self.content = f"{content[:index]}"
-        else:
-            raise ValueError(f"Attempted to parse bad marker *{marker}*")
 
-        self.lower, self.upper = range_token(token)
+        try:
+            self.lower, self.upper = range_token(token)
+        except:
+            raise ValueError( ("Juli comment marker could not be parsed for "
+                f"line ***{content}***"))
 
     def get_content(self, chapter):
         # Check if the line should be included, any of:
