@@ -62,8 +62,7 @@ chapter. For example:
 * ``#:3`` -- this line only shows up in chapter 3
 * ``#::2-4`` -- the following block shows up in chapters 2, 3, and 4
 * ``#:-2`` -- this line is in chapters 1 and 2
-* ``#::4-`` -- the following block shows up in chapter 4 and any chapters
-after
+* ``#::4-`` -- the following block shows up in chapter 4 and any chapters after
 
 The markers support trailing comments. Generated code will insert a comment
 without the ``juli`` marker containing whatever comes after your marker.
@@ -130,21 +129,10 @@ relative to the TOML configuration file.
 
 Additional, optional configuration values are:
 
-* ``chapter_prefix`` -- Specify what the prefix part of a chapter directory is
-named. If not specified, defaults to "ch"
-* ``python_globs`` -- A glob pattern that indicates which files participate in
-the parsing. Files that don't match will be copied without processing. If not
-specified it defaults to ``**/*.py``, meaning all files ending in "\*.py"
-* ``[chapter_map]`` -- Chapter numbers are integers, but you may not always
-want that in your output structure. This map allows you to change the suffix
-part of a chapter directory name. Keys in the map are the chapter numbers
-while values are what should be used in the chapter suffix.
-* ``[subdir.XYZ]`` -- Whole directories can be marked as conditional using
-this TOML map. This map must specify ``range`` and ``src_dir`` attributes. The
-``range`` attribute indicates what chapters this directory participates in,
-and the ``src_dir`` points to the conditional chapter. The ``XYZ`` portion of
-the nested map is ignored, it is there so you can have multiple conditional
-directories.
+* ``chapter_prefix`` -- Specify what the prefix part of a chapter directory is named. If not specified, defaults to "ch"
+* ``python_globs`` -- A glob pattern that indicates which files participate in the parsing. Files that don't match will be copied without processing. If not specified it defaults to ``**/*.py``, meaning all files ending in "\*.py"
+* ``[chapter_map]`` -- Chapter numbers are integers, but you may not always want that in your output structure. This map allows you to change the suffix part of a chapter directory name. Keys in the map are the chapter numbers while values are what should be used in the chapter suffix.
+* ``[subdir.XYZ]`` -- Whole directories can be marked as conditional using this TOML map. This map must specify ``range`` and ``src_dir`` attributes. The ``range`` attribute indicates what chapters this directory participates in, and the ``src_dir`` points to the conditional chapter. The ``XYZ`` portion of the nested map is ignored, it is there so you can have multiple conditional directories.
 
 Here is a full example of a configuration file:
 
