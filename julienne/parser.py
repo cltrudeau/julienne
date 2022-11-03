@@ -1,6 +1,37 @@
 # parser.py
 #   Contains the line parser for conditional content
 
+# ===========================================================================
+# Utilities
+# ===========================================================================
+
+def range_token(token):
+    lower = None
+    upper = None
+
+    if token[0] == '-':
+        # No lower bound
+        lower = 1
+        upper = token[1:]
+    elif '-' in token:
+        # Range
+        lower, upper = token.split('-')
+    else:
+        lower = token
+        upper = token
+
+    if upper == '':
+        upper = -1
+
+    return int(lower), int(upper)
+
+
+chapter_in_range = lambda chapter, conditional, lower, upper: \
+    not conditional or (upper == -1 and lower <= chapter) or \
+        (lower <= chapter <= upper)
+
+# ---------------------------------------------------------------------------
+
 class Line:
     def __init__(self, content, block_header=None):
         self.block_header = block_header
@@ -38,52 +69,31 @@ class Line:
             self.block_header = self
             try:
                 token, rest = marker[3:].split(' ', 1)
+                self.content = f"{content[:index]}# {rest}"
             except ValueError:
-                # No space after marker
+                # No space after marker, ignore this line
                 token = marker[3:]
-                rest = ''
+                self.content = None
         elif marker.startswith('#:'):
             try:
                 token, rest = marker[2:].split(' ', 1)
+                self.content = f"{content[:index]}# {rest}"
             except ValueError:
                 # No space after marker
                 token = marker[2:]
-                rest = ''
+                self.content = f"{content[:index]}"
         else:
             raise ValueError(f"Attempted to parse bad marker *{marker}*")
 
-        if token[0] == '-':
-            # No lower bound
-            self.lower = 1
-            self.upper = token[1:]
-        elif '-' in token:
-            # Range
-            self.lower, self.upper = token.split('-')
-        else:
-            self.lower = token
-            self.upper = token
-
-        if self.upper == '':
-            self.upper = -1
-
-        self.lower = int(self.lower)
-        self.upper = int(self.upper)
-
-        if rest:
-            self.content = f"{content[:index]}# {rest}"
-        else:
-            self.content = content[:index].rstrip()
+        self.lower, self.upper = range_token(token)
 
     def get_content(self, chapter):
-        print(self.content, self.conditional, self.lower, self.upper)
-
         # Check if the line should be included, any of:
         #   * not a conditional statement
         #   * chapter is larger than lower and there is no upper bound
         #   * chapter value is between lower and upper bounds
-        if not self.conditional or \
-                (self.upper == -1 and self.lower <= chapter) or \
-                (self.lower <= chapter <= self.upper):
+        if self.content is not None and chapter_in_range(chapter, 
+                self.conditional, self.lower, self.upper):
             return self.content
 
         # Line not in chapter range

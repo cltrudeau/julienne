@@ -4,7 +4,7 @@ import shutil
 
 import tomli
 
-from julienne.parser import Line
+from julienne.parser import Line, range_token, chapter_in_range
 
 # ===========================================================================
 
@@ -14,16 +14,49 @@ class DirNode:
         self.path = path
         self.children = []
 
+    def info(self):
+        print('DirNode')
+        print(f'   {self.path}')
+
+    def should_traverse(self, chapter):
+        return True
+
     def copy(self, chapter, base_path, output_path):
         rel = self.path.relative_to(base_path)
         new_dir = output_path / rel
         new_dir.mkdir(parents=True, exist_ok=True)
 
 
+class ConditionalDirNode(DirNode):
+
+    def __init__(self, path, token):
+        self.path = path
+        self.children = []
+        self.lower, self.upper = range_token(token)
+
+    def info(self):
+        print(f'ConditionalDirNode {self.lower}-{self.upper}')
+        print(f'   {self.path}')
+
+    def should_traverse(self, chapter):
+        return chapter_in_range(chapter, True, self.lower, self.upper)
+
+    def copy(self, chapter, base_path, output_path):
+        rel = self.path.relative_to(base_path)
+        new_dir = output_path / rel
+
+        if chapter_in_range(chapter, True, self.lower, self.upper):
+            new_dir.mkdir(parents=True, exist_ok=True)
+
+
 class CopyOnlyFileNode:
 
     def __init__(self, path):
         self.path = path
+
+    def info(self):
+        print('CopyOnlyFileNode')
+        print(f'   {self.path}')
 
     def copy(self, chapter, base_path, output_path):
         rel = self.path.relative_to(base_path)
@@ -48,7 +81,11 @@ class FileNode:
 
         :param content: string to parse
         """
+        if content[-1] == '\n':
+            content = content[:-1]
+
         self.lines = []
+        self.all_conditional = True
         block_header = None
         boundary_set = False
         for item in content.split('\n'):
@@ -56,11 +93,16 @@ class FileNode:
             block_header = line.block_header
             self.lines.append(line)
 
+            if not line.conditional:
+                self.all_conditional = False
+
             if boundary_set and line.conditional:
                 # Check if this line changes the boundary conditions
                 if line.lower < self.lowest:
                     self.lowest = line.lower
-                if line.upper != -1 and line.upper > self.highest:
+
+                if line.upper == -1 or \
+                        (line.upper != -1 and line.upper > self.highest):
                     self.highest = line.upper
             else:
                 # Boundary not set yet
@@ -69,10 +111,18 @@ class FileNode:
                     self.lowest = line.lower
                     self.highest = line.upper
 
+    def info(self):
+        print('FileNode', self.lowest, self.highest, self.all_conditional)
+        print(f'   {self.path}')
+
     def copy(self, chapter, base_path, output_path):
         rel = self.path.relative_to(base_path)
 
-        if self.lowest <= chapter <= self.highest:
+        # If the file is all conditional, only write it in the chapter range,
+        # If the file is not all conditional, some parts will appear in every
+        # chapter, so write it
+        if not self.all_conditional or (self.all_conditional and \
+                chapter_in_range(chapter, True, self.lowest, self.highest)):
             # Write file if within chapter range
             dest = output_path / rel
             with open(dest, "w") as f:
@@ -81,18 +131,43 @@ class FileNode:
                     if content is not None:
                         f.write(content + "\n")
 
+# ---------------------------------------------------------------------------
+
+class NodeFilter:
+    def __init__(self):
+        self.python_files = []
+        self.conditional_dirs = []
+        self.conditional_map = {}
+
+    def set_python_filter(self, py_globs, base_dir):
+        for py_glob in py_globs:
+            self.python_files.extend(base_dir.glob(py_glob))
+
+    def set_dir_filter(self, subdir, base_path):
+        for dir_spec in subdir.values():
+            token = dir_spec['range']
+            dir_path = _convert_path(base_path, Path(dir_spec['src_dir']))
+
+            self.conditional_dirs.append(dir_path)
+            self.conditional_map[dir_path] = token
+
 # ===========================================================================
 # Node Tree Traversal Methods
 # ===========================================================================
 
-def _process_directory(parent, dir_path, python_files):
+def _process_directory(parent, dir_path, node_filter):
     for path in dir_path.iterdir():
         if path.is_dir():
-            node = DirNode(path)
+            if path in node_filter.conditional_dirs:
+                token = node_filter.conditional_map[path]
+                node = ConditionalDirNode(path, token)
+            else:
+                node = DirNode(path)
+
             parent.children.append(node)
-            _process_directory(node, node.path, python_files)
+            _process_directory(node, node.path, node_filter)
         else:
-            if path in python_files:
+            if path in node_filter.python_files:
                 node = FileNode(path)
                 node.parse_file()
             else:
@@ -101,13 +176,13 @@ def _process_directory(parent, dir_path, python_files):
             parent.children.append(node)
 
 
-def _traverse(node, cmd, *args):
+def _traverse(chapter, node, cmd, *args):
     fn = getattr(node, cmd)
     fn(*args)
 
     for child in node.children:
-        if isinstance(child, DirNode):
-            _traverse(child, cmd, *args)
+        if isinstance(child, DirNode) and child.should_traverse(chapter):
+            _traverse(chapter, child, cmd, *args)
         else:
             fn = getattr(child, cmd)
             fn(*args)
@@ -163,22 +238,33 @@ def generate_files(config_file):
         raise AttributeError(('The value for "src_dir" in the config file was '
             'not a valid directory'))
 
-    # Find python file subset for processing
+    # Build the node filter that limits which files and directories
+    # participate 
+    node_filter = NodeFilter()
     py_globs = config.get('python_globs', ['**/*.py', ])
-    python_files = []
-    for py_glob in py_globs:
-        python_files.extend(base_dir.glob(py_glob))
+    node_filter.set_python_filter(py_globs, base_dir)
+
+    subdir = config.get('subdir', {})
+    node_filter.set_dir_filter(subdir, base_path)
 
     # Create node structure
     root = DirNode(base_dir)
-    _process_directory(root, base_dir, python_files)
+    _process_directory(root, base_dir, node_filter)
+
+    # DEBUG:
+    #_traverse(3, root, 'info')
 
     # !!! Generate output goes here
     biggest = _find_biggest(root)
     digits = int(ceil(log(biggest+1, 10)))
     parent_path = base_dir.parent
 
+    # DEBUG: uncomment to generate a specific chapter
+    #num = 5
+    #output_path = output_dir / Path(f"ch{num}")
+    #_traverse(num, root, 'copy', num, parent_path, output_path)
+
     for num in range(1, biggest + 1):
         print(f'Creating chapter {num}')
         output_path = output_dir / Path(f"ch{num:0{digits}}")
-        _traverse(root, 'copy', num, parent_path, output_path)
+        _traverse(num, root, 'copy', num, parent_path, output_path)

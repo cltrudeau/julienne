@@ -73,7 +73,7 @@ class ParserTestCase(TestCase):
     def test_block_parsing(self):
         #--- Test a conditional block
         global BLOCK1
-        node = FileNode(None, '')
+        node = FileNode('')
         node._parse_content(BLOCK1)
         lines = node.lines
 
