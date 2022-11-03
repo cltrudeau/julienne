@@ -259,6 +259,8 @@ def generate_files(config_file):
     digits = int(ceil(log(biggest+1, 10)))
     parent_path = base_dir.parent
 
+    prefix = config.get('chapter_prefix', 'ch')
+
     # DEBUG: uncomment to generate a specific chapter
     #num = 5
     #output_path = output_dir / Path(f"ch{num}")
@@ -266,5 +268,5 @@ def generate_files(config_file):
 
     for num in range(1, biggest + 1):
         print(f'Creating chapter {num}')
-        output_path = output_dir / Path(f"ch{num:0{digits}}")
+        output_path = output_dir / Path(f"{prefix}{num:0{digits}}")
         _traverse(num, root, 'copy', num, parent_path, output_path)
