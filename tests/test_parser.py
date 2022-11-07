@@ -6,14 +6,14 @@ from julienne.filemodel import FileNode
 # ============================================================================
 
 BLOCK1 = """\
-#::3-4
+#@@3-4
 #>e = "In chapters 3 to 4"  # inline comment
 #>f = "  as a block"\
 """
 
 BLOCK2 = """\
 for x in range(10):
-    #::1-2 block header with comment
+    #@@1-2 block header with comment
     #>g= "In chapters 1 and 2"
     h = "In all chapters"\
 """
@@ -53,25 +53,25 @@ class ParserTestCase(TestCase):
         self.assertLine(line, False, False, text)
 
         # Test a full-range conditional line with inline comment
-        text = 'b = "In chapters 1-3"   #:1-3 comment on conditional'
+        text = 'b = "In chapters 1-3"   #@1-3 comment on conditional'
         expected = 'b = "In chapters 1-3"   # comment on conditional'
         line = Line(text)
         self.assertLine(line, True, False, expected, 1, 3)
 
         # Test lower open range conditional line
-        text = 'c = "In chapters 1-2"   #:-2'
+        text = 'c = "In chapters 1-2"   #@-2'
         expected = 'c = "In chapters 1-2"   '
         line = Line(text)
         self.assertLine(line, True, False, expected, 1, 2)
 
         # Test upper open range conditional line
-        text = 'd = "In chapters 2 on"  #:2-'
+        text = 'd = "In chapters 2 on"  #@2-'
         expected = 'd = "In chapters 2 on"  '
         line = Line(text)
         self.assertLine(line, True, False, expected, 2, -1)
 
     def test_bad_parsing(self):
-        text = 'x = 3 #:'
+        text = 'x = 3 #@'
         with self.assertRaises(ValueError):
             Line(text)
 

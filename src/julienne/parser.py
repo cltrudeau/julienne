@@ -51,7 +51,7 @@ class Line:
         # Not a continuing block line, reset the header
         self.block_header = None
 
-        index = content.find("#:")
+        index = content.find("#@")
         if index == -1:
             # No juli comment, keep the line unconditionally
             self.conditional = False
@@ -64,7 +64,7 @@ class Line:
         self.conditional = True
 
         marker = content[index:].strip()
-        if marker.startswith('#::'):
+        if marker.startswith('#@@'):
             # Line is a header for a continuing block
             self.block_header = self
             try:
@@ -74,7 +74,7 @@ class Line:
                 # No space after marker, ignore this line
                 token = marker[3:]
                 self.content = None
-        else: # marker is a line marker, just "#:"
+        else: # marker is a line marker, just "#@"
             try:
                 token, rest = marker[2:].split(' ', 1)
                 self.content = f"{content[:index]}# {rest}"

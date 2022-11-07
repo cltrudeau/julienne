@@ -2,6 +2,8 @@
 import unittest, sys
 from waelstow import discover_tests
 
+sys.path.append('./src')
+
 def get_suite(labels=[]):
     return discover_tests('tests', labels)
 

@@ -81,7 +81,7 @@ class FileNode:
 
         :param content: string to parse
         """
-        if content[-1] == '\n':
+        if content and content[-1] == '\n':
             content = content[:-1]
 
         self.lines = []
@@ -90,6 +90,7 @@ class FileNode:
         boundary_set = False
         for item in content.split('\n'):
             line = Line(item, block_header)
+
             block_header = line.block_header
             self.lines.append(line)
 
@@ -138,6 +139,7 @@ class NodeFilter:
         self.python_files = []
         self.conditional_dirs = []
         self.conditional_map = {}
+        self.ignore_dirs = []
 
     def set_python_filter(self, py_globs, base_dir):
         for py_glob in py_globs:
@@ -151,29 +153,39 @@ class NodeFilter:
             self.conditional_dirs.append(dir_path)
             self.conditional_map[dir_path] = token
 
+    def set_ignore_dirs(self, ignore_dirs, base_path):
+        for dirname in ignore_dirs:
+            path = _convert_path(base_path, Path(dirname))
+            self.ignore_dirs.append(path)
+
 # ===========================================================================
 # Node Tree Traversal Methods
 # ===========================================================================
 
 def _process_directory(parent, dir_path, node_filter):
     for path in dir_path.iterdir():
-        if path.is_dir():
-            if path in node_filter.conditional_dirs:
-                token = node_filter.conditional_map[path]
-                node = ConditionalDirNode(path, token)
-            else:
-                node = DirNode(path)
+        try:
+            if path.is_dir():
+                if path in node_filter.ignore_dirs:
+                    continue
+                elif path in node_filter.conditional_dirs:
+                    token = node_filter.conditional_map[path]
+                    node = ConditionalDirNode(path, token)
+                else:
+                    node = DirNode(path)
 
-            parent.children.append(node)
-            _process_directory(node, node.path, node_filter)
-        else:
-            if path in node_filter.python_files:
-                node = FileNode(path)
-                node.parse_file()
+                parent.children.append(node)
+                _process_directory(node, node.path, node_filter)
             else:
-                node = CopyOnlyFileNode(path)
+                if path in node_filter.python_files:
+                    node = FileNode(path)
+                    node.parse_file()
+                else:
+                    node = CopyOnlyFileNode(path)
 
-            parent.children.append(node)
+                parent.children.append(node)
+        except Exception as e:
+            raise e.__class__(f"Error parsing {path}. " + str(e))
 
 
 def _traverse(chapter, node, cmd, *args):
@@ -191,14 +203,17 @@ def _traverse(chapter, node, cmd, *args):
 def _find_biggest(node, biggest=1):
     result = biggest
 
-    for child in node.children:
-        if isinstance(child, DirNode):
-            subresult = _find_biggest(child, biggest)
-            if subresult > result:
-                result = subresult
-        elif isinstance(child, FileNode):
-            if child.highest > result:
-                result = child.highest
+    try:
+        for child in node.children:
+            if isinstance(child, DirNode):
+                subresult = _find_biggest(child, biggest)
+                if subresult > result:
+                    result = subresult
+            elif isinstance(child, FileNode):
+                if hasattr(child, 'highest') and child.highest > result:
+                    result = child.highest
+    except Exception as e:
+        raise e.__class__(f"Problem occurred processing {child.path} " + str(e))
 
     return result
 
@@ -246,6 +261,9 @@ def generate_files(config_file):
 
     subdir = config.get('subdir', {})
     node_filter.set_dir_filter(subdir, base_path)
+
+    ignore_dirs = config.get('ignore_dirs', [])
+    node_filter.set_ignore_dirs(ignore_dirs, base_dir)
 
     # Create node structure
     root = DirNode(base_dir)

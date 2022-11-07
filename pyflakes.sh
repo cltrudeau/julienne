@@ -2,4 +2,4 @@
 
 echo "============================================================"
 echo "== pyflakes =="
-pyflakes julienne tests
+pyflakes src/julienne tests

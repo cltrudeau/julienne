@@ -24,3 +24,14 @@ class SampleFilesTestCase(TestCase):
         expected = here / Path('data/expected')
         result = dircmp(output, expected)
         self.assertEqual(result.diff_files, [])
+
+    def test_failures(self):
+        here = Path(__file__).parent
+        path = here / Path('data/fail.toml')
+
+        with self.assertRaises(Exception) as context:
+            generate_files(str(path))
+
+        error = context.exception
+        self.assertIn("bad_code/bad_marker.py", str(error))
+        self.assertIn("comment marker could not be parsed", str(error))

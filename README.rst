@@ -131,6 +131,7 @@ Additional, optional configuration values are:
 
 * ``chapter_prefix`` -- Specify what the prefix part of a chapter directory is named. If not specified, defaults to "ch"
 * ``python_globs`` -- A glob pattern that indicates which files participate in the parsing. Files that don't match will be copied without processing. If not specified it defaults to ``**/*.py``, meaning all files ending in "\*.py"
+* ``ignore_dirs`` -- A list of sub-directories that should not be processed.
 * ``[chapter_map]`` -- Chapter numbers are integers, but you may not always want that in your output structure. This map allows you to change the suffix part of a chapter directory name. Keys in the map are the chapter numbers while values are what should be used in the chapter suffix.
 * ``[subdir.XYZ]`` -- Whole directories can be marked as conditional using this TOML map. This map must specify ``range`` and ``src_dir`` attributes. The ``range`` attribute indicates what chapters this directory participates in, and the ``src_dir`` points to the conditional chapter. The ``XYZ`` portion of the nested map is ignored, it is there so you can have multiple conditional directories.
 
@@ -140,6 +141,7 @@ Here is a full example of a configuration file:
 
     output_dir = 'last_output'
     src_dir = 'code'
+    ignore_dirs = `bad_dir`
 
     chapter_prefix = "chap"
 
@@ -164,6 +166,7 @@ If your code directory contained:
     code/readme.txt
     code/between24/two_to_four.py
     code/after4/later_on.txt
+    code/bad_dir/something.py
 
 
 Then running ``juli`` with the sample configuration would result in the
