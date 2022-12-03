@@ -35,7 +35,7 @@ class ConditionalDirNode(DirNode):
         self.lower, self.upper = range_token(token)
 
     def info(self):
-        print(f'ConditionalDirNode {self.lower}-{self.upper}')
+        print(f'ConditionalDirNode {self.lower} - {self.upper}')
         print(f'   {self.path}')
 
     def should_traverse(self, chapter):
@@ -113,7 +113,11 @@ class FileNode:
                     self.highest = line.upper
 
     def info(self):
-        print('FileNode', self.lowest, self.highest, self.all_conditional)
+        lowest = getattr(self, 'lowest', "Unset")
+        highest = getattr(self, 'highest', "Unset")
+        all_cond = getattr(self, 'all_conditional', "Unset")
+
+        print('FileNode', lowest, highest, all_cond)
         print(f'   {self.path}')
 
     def copy(self, chapter, base_path, output_path):
@@ -202,11 +206,15 @@ def _traverse(chapter, node, cmd, *args):
 
 def _find_biggest(node, biggest=1):
     result = biggest
+    if hasattr(node, "lower") and node.lower > result:
+        result = node.lower
+    if hasattr(node, "upper") and node.upper != -1 and node.upper > result:
+        result = node.upper
 
     try:
         for child in node.children:
             if isinstance(child, DirNode):
-                subresult = _find_biggest(child, biggest)
+                subresult = _find_biggest(child, result)
                 if subresult > result:
                     result = subresult
             elif isinstance(child, FileNode):

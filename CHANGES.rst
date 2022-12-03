@@ -1,3 +1,9 @@
+0.2.1
+=====
+
+* Fix bug where conditional directory limits weren't always detected
+
+
 0.2.0
 =====
 
