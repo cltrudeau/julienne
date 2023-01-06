@@ -149,7 +149,7 @@ Additional, optional configuration values are:
 * ``python_globs`` -- A glob pattern that indicates which files participate in the parsing. Files that don't match will be copied without processing. If not specified it defaults to ``**/*.py``, meaning all files ending in "\*.py"
 * ``ignore_dirs`` -- A list of sub-directories that should not be processed.
 * ``[chapter_map]`` -- Chapter numbers are integers, but you may not always want that in your output structure. This map allows you to change the suffix part of a chapter directory name. Keys in the map are the chapter numbers while values are what should be used in the chapter suffix.
-* ``[subdir.XYZ]`` -- Whole directories can be marked as conditional using this TOML map. This map must specify ``range`` and ``src_dir`` attributes. The ``range`` attribute indicates what chapters this directory participates in, and the ``src_dir`` points to the conditional chapter. The ``XYZ`` portion of the nested map is ignored, it is there so you can have multiple conditional directories.
+* ``[ranged_files.XYZ]`` -- Files or directories can be marked as conditional using this TOML map. This map must specify ``range`` and ``files`` attributes. The ``range`` attribute indicates what chapters this directory participates in, and ``files`` is listing of file or directory names. In the case of files they will only participate in parsing if the match the range value. If a file contains a marker outside the range it will be ignored. The ``XYZ`` portion of the TOML nested map is ignored, it is there so you can have multiple conditional directories.
 
 Here is a full example of a configuration file:
 
@@ -165,13 +165,13 @@ Here is a full example of a configuration file:
     4 = 'Four'
     5 = '5.0'
 
-    [subdir.foo]
+    [ranged_files.foo]
     range = '2-4'
-    src_dir = 'code/between24'
+    files = ['code/between24', 'only24.py']
 
-    [subdir.bar]
+    [ranged_files.bar]
     range = '4-'
-    src_dir = 'code/after4'
+    files = ['code/after4', ]
         
 
 If your code directory contained:
@@ -179,6 +179,7 @@ If your code directory contained:
 .. code-block:: text
 
     code/script.py
+    code/only24.py
     code/readme.txt
     code/between24/two_to_four.py
     code/after4/later_on.txt
@@ -194,14 +195,17 @@ following:
     last_output/chap1/code/readme.txt
 
     last_output/chap2/code/script.py
+    last_output/chap2/code/only24.py
     last_output/chap2/code/readme.txt
     last_output/chap2/code/between24/two_to_four.py
 
     last_output/chap3/code/script.py
+    last_output/chap3/code/only24.py
     last_output/chap3/code/readme.txt
     last_output/chap3/code/between24/two_to_four.py
 
     last_output/chapFour/code/script.py
+    last_output/chapFour/code/only24.py
     last_output/chapFour/code/readme.txt
     last_output/chapFour/code/between24/two_to_four.py
     last_output/chapFour/code/after4/later_on.txt
@@ -210,6 +214,6 @@ following:
     last_output/chap5.0/code/readme.txt
     last_output/chap5.0/code/after4/later_on.txt
 
-The ``script.py`` and ``two_to_four.py`` files will be processed for
-conditional content. The ``readme.txt`` and ``later_on.txt`` files will be
-straight copies as they aren't covered by the Python glob.
+The ``script.py``, ``two_to_four.py``, and ``only24.py``  files will be
+processed for conditional content. The ``readme.txt`` and ``later_on.txt``
+files will be straight copies as they aren't covered by the Python glob.

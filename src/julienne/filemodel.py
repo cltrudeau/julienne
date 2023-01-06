@@ -110,26 +110,42 @@ class FileNode:
                     if content is not None:
                         f.write(content + "\n")
 
+
+class ConditionalFileNode(FileNode):
+    def __init__(self, path, token):
+        self.lower, self.upper = range_token(token)
+        super().__init__(path)
+
+    def info(self):
+        print(f'ConditionalFileNode {self.lower} - {self.upper}')
+        print(f'   {self.path}')
+
+    def copy(self, chapter, base_path, output_path):
+        if not chapter_in_range(chapter, True, self.lower, self.upper):
+            return
+
+        super().copy(chapter, base_path, output_path)
+
 # ---------------------------------------------------------------------------
 
 class NodeFilter:
     def __init__(self):
         self.python_files = []
-        self.conditional_dirs = []
-        self.conditional_map = {}
         self.ignore_dirs = []
+
+        self.ranged_files_map = {}
 
     def set_python_filter(self, py_globs, base_dir):
         for py_glob in py_globs:
             self.python_files.extend(base_dir.glob(py_glob))
 
-    def set_dir_filter(self, subdir, base_path):
-        for dir_spec in subdir.values():
-            token = dir_spec['range']
-            dir_path = _convert_path(base_path, Path(dir_spec['src_dir']))
-
-            self.conditional_dirs.append(dir_path)
-            self.conditional_map[dir_path] = token
+    def set_ranged_file_filter(self, ranged_files, base_path):
+        # Loop over all the "ranged_files" maps and track their content
+        for spec in ranged_files.values():
+            token = spec['range']
+            for path in spec['files']:
+                ranged_path = _convert_path(base_path, Path(path))
+                self.ranged_files_map[ranged_path] = token
 
     def set_ignore_dirs(self, ignore_dirs, base_path):
         for dirname in ignore_dirs:
@@ -146,8 +162,8 @@ def _process_directory(parent, dir_path, node_filter):
             if path.is_dir():
                 if path in node_filter.ignore_dirs:
                     continue
-                elif path in node_filter.conditional_dirs:
-                    token = node_filter.conditional_map[path]
+                elif path in node_filter.ranged_files_map.keys():
+                    token = node_filter.ranged_files_map[path]
                     node = ConditionalDirNode(path, token)
                 else:
                     node = DirNode(path)
@@ -156,7 +172,12 @@ def _process_directory(parent, dir_path, node_filter):
                 _process_directory(node, node.path, node_filter)
             else:
                 if path in node_filter.python_files:
-                    node = FileNode(path)
+                    if path in node_filter.ranged_files_map.keys():
+                        token = node_filter.ranged_files_map[path]
+                        node = ConditionalFileNode(path, token)
+                    else:
+                        node = FileNode(path)
+
                     node.parse_file()
                 else:
                     node = CopyOnlyFileNode(path)
@@ -241,8 +262,8 @@ def generate_files(config_file):
     py_globs = config.get('python_globs', ['**/*.py', ])
     node_filter.set_python_filter(py_globs, base_dir)
 
-    subdir = config.get('subdir', {})
-    node_filter.set_dir_filter(subdir, base_path)
+    ranged_files = config.get('ranged_files', {})
+    node_filter.set_ranged_file_filter(ranged_files, base_path)
 
     ignore_dirs = config.get('ignore_dirs', [])
     node_filter.set_ignore_dirs(ignore_dirs, base_dir)
@@ -266,6 +287,7 @@ def generate_files(config_file):
     #num = 5
     #output_path = output_dir / Path(f"ch{num}")
     #_traverse(num, root, 'copy', num, parent_path, output_path)
+    #exit()
 
     for num in range(1, biggest + 1):
         print(f'Creating chapter {num}')

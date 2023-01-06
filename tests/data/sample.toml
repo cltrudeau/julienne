@@ -7,10 +7,10 @@ ignore_dirs = ['not_here', ]
 4 = 'Four'
 5 = '5.0'
 
-[subdir.foo]
+[ranged_files.foo]
 range = '2-4'
-src_dir = 'code/between24'
+files = ['code/between24', 'code/only24.py']
 
-[subdir.bar]
+[ranged_files.bar]
 range = '4-'
-src_dir = 'code/after4'
+files = ['code/after4', ]
