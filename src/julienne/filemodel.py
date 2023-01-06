@@ -4,7 +4,7 @@ import shutil
 
 import tomli
 
-from julienne.parser import Line, range_token, chapter_in_range
+from julienne.parser import parse_content, range_token, chapter_in_range
 
 # ===========================================================================
 
@@ -81,36 +81,10 @@ class FileNode:
 
         :param content: string to parse
         """
-        if content and content[-1] == '\n':
-            content = content[:-1]
-
-        self.lines = []
-        self.all_conditional = True
-        block_header = None
-        boundary_set = False
-        for item in content.split('\n'):
-            line = Line(item, block_header)
-
-            block_header = line.block_header
-            self.lines.append(line)
-
-            if not line.conditional:
-                self.all_conditional = False
-
-            if boundary_set and line.conditional:
-                # Check if this line changes the boundary conditions
-                if line.lower < self.lowest:
-                    self.lowest = line.lower
-
-                if line.upper == -1 or \
-                        (line.upper != -1 and line.upper > self.highest):
-                    self.highest = line.upper
-            else:
-                # Boundary not set yet
-                if line.conditional:
-                    boundary_set = True
-                    self.lowest = line.lower
-                    self.highest = line.upper
+        self.parser = parse_content(content)
+        self.lowest = self.parser.lowest
+        self.highest = self.parser.highest
+        self.all_conditional = self.parser.all_conditional
 
     def info(self):
         lowest = getattr(self, 'lowest', "Unset")
@@ -131,7 +105,7 @@ class FileNode:
             # Write file if within chapter range
             dest = output_path / rel
             with open(dest, "w") as f:
-                for line in self.lines:
+                for line in self.parser.lines:
                     content = line.get_content(chapter)
                     if content is not None:
                         f.write(content + "\n")

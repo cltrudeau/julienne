@@ -34,4 +34,4 @@ class SampleFilesTestCase(TestCase):
 
         error = context.exception
         self.assertIn("bad_code/bad_marker.py", str(error))
-        self.assertIn("comment marker could not be parsed", str(error))
+        self.assertIn("Unknown marker type", str(error))

@@ -2,7 +2,7 @@
 julienne
 ********
 
-**very ALPHA, use at your own risk**
+**very ALPHA, use at your own risk, interface may change!**
 
 When writing code for teaching, you often need multiple versions of your code,
 showing progress to your students as you introduce new concepts. Keeping

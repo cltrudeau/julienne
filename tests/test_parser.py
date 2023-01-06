@@ -1,114 +1,118 @@
 from unittest import TestCase
 
-from julienne.parser import Line
-from julienne.filemodel import FileNode
+from waelstow import noted_raise
+
+from julienne.parser import parse_content
 
 # ============================================================================
 
-BLOCK1 = """\
-#@@3-4
-#>e = "In chapters 3 to 4"  # inline comment
-#>f = "  as a block"\
+CODE_BLOCK1 = """\
+#@+ 3-4
+#@- e = "In chapters 3 to 4"  # inline comment
+#@- f = "  as a block"\
 """
 
-BLOCK2 = """\
+EXPECTED_BLOCK1 = [
+    """e = "In chapters 3 to 4"  # inline comment""",
+    """f = "  as a block"\
+""",
+]
+
+
+CODE_BLOCK2 = """\
 for x in range(10):
-    #@@1-2 block header with comment
-    #>g= "In chapters 1 and 2"
+    #@+ 1-2 block header with comment
+    #@- g= "In chapters 1 and 2"
     h = "In all chapters"\
 """
+
+EXPECTED_BLOCK2 = [
+    """for x in range(10):""",
+    """    # block header with comment""",
+    """    g= "In chapters 1 and 2"\
+""",
+    """    h = "In all chapters"\
+"""
+]
 
 # ----------------------------------------------------------------------------
 
 class ParserTestCase(TestCase):
-    def assertLine(self, line, conditional, is_block, expected, lower=0,
-            upper=0):
 
-        self.assertEqual(expected, line.content)
+    def assertParser(self, parser, all_conditional, text, lowest, highest):
+        self.assertEqual(len(text), len(parser.lines))
 
-        if not conditional:
-            self.assertFalse(line.conditional)
-            self.assertIsNone(line.block_header)
-            return
+        for expected, result in zip(text, parser.lines):
+            self.assertEqual(expected, result.content)
 
-        # Conditional line
-        self.assertTrue(line.conditional)
-        self.assertEqual(line.lower, lower)
-        self.assertEqual(line.upper, upper)
-
-        if is_block:
-            self.assertIsNotNone(line.block_header)
-        else:
-            self.assertIsNone(line.block_header)
+        self.assertEqual(all_conditional, parser.all_conditional)
+        self.assertEqual(lowest, parser.lowest)
+        self.assertEqual(highest, parser.highest)
 
     def test_line_parsing(self):
         # Test a comment
         text = "# This is a sample file"
-        line = Line(text)
-        self.assertLine(line, False, False, text)
+        parser = parse_content(text)
+        self.assertParser(parser, False, [text,], 1, -1)
 
         # Test a regular line
         text = 'a = "In all chapters"   # inline comment'
-        line = Line(text)
-        self.assertLine(line, False, False, text)
+        parser = parse_content(text)
+        self.assertParser(parser, False, [text,], 1, -1)
 
         # Test a full-range conditional line with inline comment
-        text = 'b = "In chapters 1-3"   #@1-3 comment on conditional'
+        text = 'b = "In chapters 1-3"   #@= 1-3 comment on conditional'
         expected = 'b = "In chapters 1-3"   # comment on conditional'
-        line = Line(text)
-        self.assertLine(line, True, False, expected, 1, 3)
+        parser = parse_content(text)
+        self.assertParser(parser, True, [expected,], 1, 3)
 
         # Test lower open range conditional line
-        text = 'c = "In chapters 1-2"   #@-2'
+        text = 'c = "In chapters 1-2"   #@= -2'
         expected = 'c = "In chapters 1-2"   '
-        line = Line(text)
-        self.assertLine(line, True, False, expected, 1, 2)
+        parser = parse_content(text)
+        self.assertParser(parser, True, [expected,], 1, 2)
 
         # Test upper open range conditional line
-        text = 'd = "In chapters 2 on"  #@2-'
+        text = 'd = "In chapters 2 on"  #@= 2-'
         expected = 'd = "In chapters 2 on"  '
-        line = Line(text)
-        self.assertLine(line, True, False, expected, 2, -1)
+        parser = parse_content(text)
+        self.assertParser(parser, True, [expected,], 2, -1)
 
     def test_bad_parsing(self):
         text = 'x = 3 #@'
         with self.assertRaises(ValueError):
-            Line(text)
+            parse_content(text)
+
+        text = 'x = 3 #@*'
+        with self.assertRaises(ValueError):
+            parse_content(text)
 
     def test_block_parsing(self):
         #--- Test a conditional block
-        global BLOCK1
-        node = FileNode('')
-        node._parse_content(BLOCK1)
-        lines = node.lines
-
-        # Block header line has no comment, should be empty
-        self.assertIsNotNone(lines[0].block_header)
-        self.assertIsNone(lines[0].content)
-
-        expected = 'e = "In chapters 3 to 4"  # inline comment'
-        self.assertLine(lines[1], True, True, expected, 3, 4)
-
-        expected = 'f = "  as a block"'
-        self.assertLine(lines[2], True, True, expected, 3, 4)
+        parser = parse_content(CODE_BLOCK1)
+        self.assertParser(parser, True, EXPECTED_BLOCK1, 3, 4)
 
         #--- Test a conditional block inside an indent
-        node.lines = []
-        node._parse_content(BLOCK2)
-        lines = node.lines
+        parser = parse_content(CODE_BLOCK2)
+        self.assertParser(parser, False, EXPECTED_BLOCK2, 1, 2)
 
-        # First line is not conditional
-        expected = 'for x in range(10):'
-        self.assertLine(lines[0], False, False, expected)
+        # Validate the non-conditional parts
+        with noted_raise("[chapter={chapter}]"):
+            for chapter in range(1, 4):
+                content = parser.lines[0].get_content(chapter)
+                self.assertIsNotNone(content)
+                content = parser.lines[3].get_content(chapter)
+                self.assertIsNotNone(content)
 
-        # 2nd line is block header with comment
-        expected = '    # block header with comment'
-        self.assertLine(lines[1], True, True, expected, 1, 2)
-
-        # 3rd line is in conditional block
-        expected = '    g= "In chapters 1 and 2"'
-        self.assertLine(lines[2], True, True, expected, 1, 2)
-
-        # Last line is not conditional
-        expected = '    h = "In all chapters"'
-        self.assertLine(lines[3], False, False, expected)
+                # Line[1] and Line[2] are conditional, showing in 
+                # chapters 1-2 only
+                if chapter <= 2:
+                    content = parser.lines[1].get_content(chapter)
+                    self.assertIsNotNone(content)
+                    content = parser.lines[2].get_content(chapter)
+                    self.assertIsNotNone(content)
+                else:
+                    content = parser.lines[1].get_content(chapter)
+                    self.assertIsNone(content)
+                    content = parser.lines[2].get_content(chapter)
+                    self.assertIsNone(content)
