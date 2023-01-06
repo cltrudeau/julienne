@@ -9,8 +9,8 @@ ParseMode = Enum('ParseMode', ['NORMAL', 'BLOCK_COMMENT', 'BLOCK_OPEN'])
 
 Marker = namedtuple('Marker', ["jtype", "lower", "upper", "comment"])
 
-ALL_JTYPES = ('=', '+', '-', )
-RANGED_JTYPES = ('=', '+', )
+ALL_JTYPES = ('=', '+', '-', '[', ']')
+RANGED_JTYPES = ('=', '+', '[')
 
 # ===========================================================================
 
@@ -26,6 +26,15 @@ class Parser:
     def add_line(self, text, conditional, lower, upper):
         line = Line(text, conditional, lower, upper)
         self.lines.append(line)
+
+    def add_if_commented(self, text, index, marker):
+        line_text = ''
+        if marker.comment:
+            # Marker line has a comment, preserve leading spaces and insert
+            line_text = text[0:index] + f"# {marker.comment}"
+
+        if line_text:
+            self.add_line(line_text, True, marker.lower, marker.upper)
 
     def reset_mode(self):
         self.mode = ParseMode.NORMAL
@@ -131,10 +140,16 @@ def parse_content(content):
     for line_no, text in enumerate(content.split('\n')):
         index = text.find("#@")
         if index == -1:
-            # No juli comment, keep the line unconditionally
-            parser.add_line(text, False, None, None)
-            parser.reset_mode()
-            parser.all_conditional = False
+            if parser.mode == ParseMode.BLOCK_OPEN:
+                # Inside an open block, add conditional line based on parent
+                parser.add_line(text, True, parser.block_header.lower,
+                    parser.block_header.upper)
+            else:
+                # No juli comment, keep the line unconditionally
+                parser.add_line(text, False, None, None)
+                parser.reset_mode()
+                parser.all_conditional = False
+
             continue
 
         # Found a conditional line, behaviour changes based on the type of
@@ -155,13 +170,7 @@ def parse_content(content):
         elif marker.jtype == '+':
             # Header for a block comment
             parser.set_mode(ParseMode.BLOCK_COMMENT, marker)
-
-            if marker.comment:
-                # Marker line has a comment, preserve leading spaces and insert
-                line_text = text[0:index] + f"# {marker.comment}"
-
-            if line_text:
-                parser.add_line(line_text, True, marker.lower, marker.upper)
+            parser.add_if_commented(text, index, marker)
         elif marker.jtype == '-':
             # Body for a block comment
             if parser.mode != ParseMode.BLOCK_COMMENT:
@@ -176,13 +185,23 @@ def parse_content(content):
             if line_text:
                 parser.add_line(line_text, True, parser.block_header.lower, 
                     parser.block_header.upper)
+        elif marker.jtype == '[':
+            # Header for an open block 
+            parser.set_mode(ParseMode.BLOCK_OPEN, marker)
+            parser.add_if_commented(text, index, marker)
+        elif marker.jtype == ']':
+            # Closing marker for open blocks, reset to normal
+            parser.reset_mode()
+            parser.add_if_commented(text, index, marker)
 
         # Manage boundary range
         if marker.jtype == '-':
             # Block Comment body
             parser.manage_boundaries(parser.block_header.lower,
                 parser.block_header.upper)
-        else:
+        elif marker.jtype != ']':
+            # Boundaries for open block have been processed already, all other
+            # jtypes need to have their boundaries checked
             parser.manage_boundaries(marker.lower, marker.upper)
 
     parser.fix_boundaries()

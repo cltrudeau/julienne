@@ -13,3 +13,8 @@ for x in range(10):
     #@+ 1-2 block header with comment
     #@- g= "In chapters 1 and 2"
     h = "In all chapters"
+
+#@[ 3- uncommented conditional block
+def foo():
+    print("Blah de blah")
+#@]

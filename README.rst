@@ -34,38 +34,49 @@ your code.
     # This is a sample file
 
     a = "In all chapters"   # inline comment
-    b = "In chapters 1-3"   #:1-3 comment on conditional
-    c = "In chapters 1-2"   #:-2
-    d = "In chapters 2 on"  #:2-
+    b = "In chapters 1-3"   #@= 1-3 comment on conditional
+    c = "In chapters 1-2"   #@= -2
+    d = "In chapters 2 on"  #@= 2-
 
-    #::3-4
-    #>e = "In chapters 3 to 4"  # inline comment
-    #>f = "  as a block"
+    #@+ 3-4
+    #@- e = "In chapters 3 to 4"  # inline comment
+    #@- f = "  as a block"
 
     for x in range(10):
-        #::1-2 block header with comment
-        #>g= "In chapters 1 and 2"
+        #@+ 1-2 block header with comment
+        #@- g= "In chapters 1 and 2"
         h = "In all chapters"
 
+    #@[ 3- uncommented conditional block
+    def foo():
+        print("Blah de blah")
+    #@]
 
-The ``juli`` parser supports three conditional comment markers:
+All ``juli`` comment markers start with ``#@`` followed by the julienne type
+which determines how the marker behaves. The types are as follows:
 
-* ``#:`` -- is for marking a single line with a range of chapters
-* ``#::`` -- is for marking the start of a conditional block
-* ``#>`` -- is for marking a line participating in a block
+* ``#@=`` -- A single line conditional to a range of chapters
+* ``#@+`` -- Start a conditional block that is commented out, applies to a range of chapters
+* ``#@-`` -- Part of a conditional block that is commented out. Must appear after a ``#@+``
+* ``#@[`` -- Start a conditional block that is not commented out, applies to a range of chapters
+* ``#@]`` -- End a conditional block that is not commented. Must appear after a ``#@[``
 
-The ``#:`` and ``#::`` markers expect a range that indicates what chapters a
-line or block participates within. Ranges can indicate a single chapter, a
-range of chapters, up-to-and-including a chapter, and including-and-after a
-chapter. For example:
+The ``#@=``, ``#@+``, and ``#@[`` markers expect a range that indicates what
+chapters a line or block participates within. Ranges can indicate a single
+chapter, a range of chapters, up-to-and-including a chapter, and
+including-and-after a chapter. A space is expected between the julienne type 
+and the beginning of the range specifier. Example ranges:
 
-* ``#:3`` -- this line only shows up in chapter 3
-* ``#::2-4`` -- the following block shows up in chapters 2, 3, and 4
-* ``#:-2`` -- this line is in chapters 1 and 2
-* ``#::4-`` -- the following block shows up in chapter 4 and any chapters after
+* ``#@= 3`` -- this line only shows up in chapter 3
+* ``#@+ 2-4`` -- the following commented block is uncommented in chapters 2, 3, and 4
+* ``#@= 2-`` -- this line is in chapters 2 and above
+* ``#@[ -4`` -- the following uncommented block starts appearing in chapter 4
 
 The markers support trailing comments. Generated code will insert a comment
 without the ``juli`` marker containing whatever comes after your marker.
+Markers without trailing comments will not be included in the results. Any
+indentation before a marker is respected if the marked line results in 
+output.
 
 The sample code above will generate four chapters. Chapter one would contain:
 
@@ -79,6 +90,7 @@ The sample code above will generate four chapters. Chapter one would contain:
 
 
     for x in range(10):
+        # block header with comment
         g= "In chapters 1 and 2"
         h = "In all chapters"
 
@@ -97,6 +109,10 @@ Chapter four would contain:
 
     for x in range(10):
         h = "In all chapters"
+
+    # uncommented conditional block
+    def foo():
+        print("Blah de blah")
 
 
 Note that files that contain only conditional lines will not be included if

@@ -35,6 +35,19 @@ EXPECTED_BLOCK2 = [
 """
 ]
 
+CODE_BLOCK3 = """\
+#@[ 2- uncommented conditional block
+def foo():
+    print('Blah de blah')
+#@]
+"""
+
+EXPECTED_BLOCK3 = [
+    """# uncommented conditional block""",
+    """def foo():""",
+    """    print('Blah de blah')""",
+]
+
 # ----------------------------------------------------------------------------
 
 class ParserTestCase(TestCase):
@@ -116,3 +129,7 @@ class ParserTestCase(TestCase):
                     self.assertIsNone(content)
                     content = parser.lines[2].get_content(chapter)
                     self.assertIsNone(content)
+
+        # --- Test an uncommented conditional block
+        parser = parse_content(CODE_BLOCK3)
+        self.assertParser(parser, True, EXPECTED_BLOCK3, 2, -1)
