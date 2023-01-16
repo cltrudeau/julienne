@@ -148,6 +148,7 @@ Additional, optional configuration values are:
 * ``chapter_prefix`` -- Specify what the prefix part of a chapter directory is named. If not specified, defaults to "ch"
 * ``python_globs`` -- A glob pattern that indicates which files participate in the parsing. Files that don't match will be copied without processing. If not specified it defaults to ``**/*.py``, meaning all files ending in "\*.py"
 * ``ignore_dirs`` -- A list of sub-directories that should not be processed.
+* ``ignore_substrings`` -- A list of strings that if they show up in the path the path is ignored. Useful for things like `__pycache__`
 * ``[chapter_map]`` -- Chapter numbers are integers, but you may not always want that in your output structure. This map allows you to change the suffix part of a chapter directory name. Keys in the map are the chapter numbers while values are what should be used in the chapter suffix.
 * ``[ranged_files.XYZ]`` -- Files or directories can be marked as conditional using this TOML map. This map must specify ``range`` and ``files`` attributes. The ``range`` attribute indicates what chapters this directory participates in, and ``files`` is listing of file or directory names. In the case of files they will only participate in parsing if the match the range value. If a file contains a marker outside the range it will be ignored. The ``XYZ`` portion of the TOML nested map is ignored, it is there so you can have multiple conditional directories.
 
@@ -157,7 +158,8 @@ Here is a full example of a configuration file:
 
     output_dir = 'last_output'
     src_dir = 'code'
-    ignore_dirs = `bad_dir`
+    ignore_dirs = ['bad_dir', ]
+    ignore_substrings = ['__pycache__', ]
 
     chapter_prefix = "chap"
 
@@ -217,3 +219,12 @@ following:
 The ``script.py``, ``two_to_four.py``, and ``only24.py``  files will be
 processed for conditional content. The ``readme.txt`` and ``later_on.txt``
 files will be straight copies as they aren't covered by the Python glob.
+
+.. warning:: 
+
+    There is a known bug in Python where the `shutil.copy2` method does not
+    copy metadata on MacOS or Windows even though it is supposed to. This
+    means group ownership flags and execution bits will get lost on those
+    operating systems. See:
+
+    https://github.com/python/cpython/issues/83087

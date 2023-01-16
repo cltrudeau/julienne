@@ -62,7 +62,7 @@ class CopyOnlyFileNode:
         rel = self.path.relative_to(base_path)
         dest = output_path / rel
 
-        shutil.copy(self.path, dest)
+        shutil.copy2(self.path, dest)
 
 
 class FileNode:
@@ -132,6 +132,7 @@ class NodeFilter:
     def __init__(self):
         self.python_files = []
         self.ignore_dirs = []
+        self.ignore_substrings = []
 
         self.ranged_files_map = {}
 
@@ -158,6 +159,16 @@ class NodeFilter:
 
 def _process_directory(parent, dir_path, node_filter):
     for path in dir_path.iterdir():
+        # Skip any paths that are in our ignore_substrings list
+        skip = False
+        for ignore_substring in node_filter.ignore_substrings:
+            if ignore_substring in str(path):
+                skip = True
+
+        if skip:
+            # Path contained something spec'd in ignore_substrings, ignore it
+            continue
+
         try:
             if path.is_dir():
                 if path in node_filter.ignore_dirs:
@@ -268,12 +279,15 @@ def generate_files(config_file):
     ignore_dirs = config.get('ignore_dirs', [])
     node_filter.set_ignore_dirs(ignore_dirs, base_dir)
 
+    node_filter.ignore_substrings = config.get('ignore_substrings', [])
+
     # Create node structure
     root = DirNode(base_dir)
     _process_directory(root, base_dir, node_filter)
 
     # DEBUG:
     #_traverse(3, root, 'info')
+    #exit()
 
     ### Generate output
     parent_path = base_dir.parent

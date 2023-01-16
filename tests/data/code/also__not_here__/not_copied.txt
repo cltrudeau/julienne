@@ -1,0 +1,2 @@
+This file shouldn't be copied as the directory name is in the ignored_strings
+list

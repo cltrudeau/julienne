@@ -1,3 +1,13 @@
+0.4.0
+=====
+
+* Added `ignore_substrings` feature allowing you to specify a partial name of
+a path to ignore, useful for things like `__pycache__`
+* Found bug where file metadata isn't maintained during a copy, updated to use
+the right `shutil` call only to find out there is a Python bug in that library
+for MacOS and Windows since 3.8
+
+
 0.3.0
 =====
 
