@@ -1,202 +1,22 @@
 from math import log, ceil
 from pathlib import Path
-import shutil
 
 import tomli
 
-from julienne.parser import parse_content, range_token, chapter_in_range
+from julienne.parser import range_token
+from julienne.nodes import (DirNode, ConditionalDirNode, FileNode,
+    ConditionalFileNode, CopyOnlyFileNode)
 
 # ===========================================================================
-
-class DirNode:
-
-    def __init__(self, path):
-        self.path = path
-        self.children = []
-
-    def info(self):
-        print('DirNode')
-        print(f'   {self.path}')
-
-    def should_traverse(self, chapter):
-        return True
-
-    def copy(self, chapter, base_path, output_path):
-        rel = self.path.relative_to(base_path)
-        new_dir = output_path / rel
-        new_dir.mkdir(parents=True, exist_ok=True)
-
-
-class ConditionalDirNode(DirNode):
-
-    def __init__(self, path, token):
-        self.path = path
-        self.children = []
-        self.lower, self.upper = range_token(token)
-
-    def info(self):
-        print(f'ConditionalDirNode {self.lower} - {self.upper}')
-        print(f'   {self.path}')
-
-    def should_traverse(self, chapter):
-        return chapter_in_range(chapter, True, self.lower, self.upper)
-
-    def copy(self, chapter, base_path, output_path):
-        rel = self.path.relative_to(base_path)
-        new_dir = output_path / rel
-
-        if chapter_in_range(chapter, True, self.lower, self.upper):
-            new_dir.mkdir(parents=True, exist_ok=True)
-
-
-class CopyOnlyFileNode:
-
-    def __init__(self, path):
-        self.path = path
-
-    def info(self):
-        print('CopyOnlyFileNode')
-        print(f'   {self.path}')
-
-    def copy(self, chapter, base_path, output_path):
-        rel = self.path.relative_to(base_path)
-        dest = output_path / rel
-
-        shutil.copy2(self.path, dest)
-
-
-class FileNode:
-
-    def __init__(self, path):
-        self.path = path
-
-    def parse_file(self):
-        ### Done as a separate step to make testing easier, allows for
-        # testing the ._parse_content() method without having an actual file
-        self._parse_content(self.path.read_text())
-
-    def _parse_content(self, content):
-        """Sets the list of parsed Line objects, one for each line in the 
-        given string of content.
-
-        :param content: string to parse
-        """
-        self.parser = parse_content(content)
-        self.lowest = self.parser.lowest
-        self.highest = self.parser.highest
-        self.all_conditional = self.parser.all_conditional
-
-    def info(self):
-        lowest = getattr(self, 'lowest', "Unset")
-        highest = getattr(self, 'highest', "Unset")
-        all_cond = getattr(self, 'all_conditional', "Unset")
-
-        print('FileNode', lowest, highest, all_cond)
-        print(f'   {self.path}')
-
-    def copy(self, chapter, base_path, output_path):
-        rel = self.path.relative_to(base_path)
-
-        # If the file is all conditional, only write it in the chapter range,
-        # If the file is not all conditional, some parts will appear in every
-        # chapter, so write it
-        if not self.all_conditional or (self.all_conditional and \
-                chapter_in_range(chapter, True, self.lowest, self.highest)):
-            # Write file if within chapter range
-            dest = output_path / rel
-            with open(dest, "w") as f:
-                for line in self.parser.lines:
-                    content = line.get_content(chapter)
-                    if content is not None:
-                        f.write(content + "\n")
-
-
-class ConditionalFileNode(FileNode):
-    def __init__(self, path, token):
-        self.lower, self.upper = range_token(token)
-        super().__init__(path)
-
-    def info(self):
-        print(f'ConditionalFileNode {self.lower} - {self.upper}')
-        print(f'   {self.path}')
-
-    def copy(self, chapter, base_path, output_path):
-        if not chapter_in_range(chapter, True, self.lower, self.upper):
-            return
-
-        super().copy(chapter, base_path, output_path)
-
-# ---------------------------------------------------------------------------
-
-class NodeFilter:
-    def __init__(self):
-        self.python_files = []
-        self.ignore_dirs = []
-        self.ignore_substrings = []
-
-        self.ranged_files_map = {}
-
-    def set_python_filter(self, py_globs, base_dir):
-        for py_glob in py_globs:
-            self.python_files.extend(base_dir.glob(py_glob))
-
-    def set_ranged_file_filter(self, ranged_files, base_path):
-        # Loop over all the "ranged_files" maps and track their content
-        for spec in ranged_files.values():
-            token = spec['range']
-            for path in spec['files']:
-                ranged_path = _convert_path(base_path, Path(path))
-                self.ranged_files_map[ranged_path] = token
-
-    def set_ignore_dirs(self, ignore_dirs, base_path):
-        for dirname in ignore_dirs:
-            path = _convert_path(base_path, Path(dirname))
-            self.ignore_dirs.append(path)
-
-# ===========================================================================
-# Node Tree Traversal Methods
+# Utilities
 # ===========================================================================
 
-def _process_directory(parent, dir_path, node_filter):
-    for path in dir_path.iterdir():
-        # Skip any paths that are in our ignore_substrings list
-        skip = False
-        for ignore_substring in node_filter.ignore_substrings:
-            if ignore_substring in str(path):
-                skip = True
+def _convert_path(base_path, path):
+    if path.is_absolute():
+        return path
 
-        if skip:
-            # Path contained something spec'd in ignore_substrings, ignore it
-            continue
-
-        try:
-            if path.is_dir():
-                if path in node_filter.ignore_dirs:
-                    continue
-                elif path in node_filter.ranged_files_map.keys():
-                    token = node_filter.ranged_files_map[path]
-                    node = ConditionalDirNode(path, token)
-                else:
-                    node = DirNode(path)
-
-                parent.children.append(node)
-                _process_directory(node, node.path, node_filter)
-            else:
-                if path in node_filter.python_files:
-                    if path in node_filter.ranged_files_map.keys():
-                        token = node_filter.ranged_files_map[path]
-                        node = ConditionalFileNode(path, token)
-                    else:
-                        node = FileNode(path)
-
-                    node.parse_file()
-                else:
-                    node = CopyOnlyFileNode(path)
-
-                parent.children.append(node)
-        except Exception as e:
-            raise e.__class__(f"Error parsing {path}. " + str(e))
-
+    mixed = base_path / path
+    return mixed.resolve()
 
 def _traverse(chapter, node, cmd, *args):
     fn = getattr(node, cmd)
@@ -209,42 +29,165 @@ def _traverse(chapter, node, cmd, *args):
             fn = getattr(child, cmd)
             fn(*args)
 
-
-def _find_biggest(node, biggest=1):
-    result = biggest
-    if hasattr(node, "lower") and node.lower > result:
-        result = node.lower
-    if hasattr(node, "upper") and node.upper != -1 and node.upper > result:
-        result = node.upper
-
-    try:
-        for child in node.children:
-            if isinstance(child, DirNode):
-                subresult = _find_biggest(child, result)
-                if subresult > result:
-                    result = subresult
-            elif isinstance(child, FileNode):
-                if hasattr(child, 'highest') and child.highest > result:
-                    result = child.highest
-    except Exception as e:
-        raise e.__class__(f"Problem occurred processing {child.path} " + str(e))
-
-    return result
-
-# ---------------------------------------------------------------------------
-# Utilities
-# ---------------------------------------------------------------------------
-
-def _convert_path(base_path, path):
-    if path.is_absolute():
-        return path
-
-    mixed = base_path / path
-    return mixed.resolve()
-
+# ===========================================================================
+# File Tree
 # ===========================================================================
 
-def generate_files(config_file):
+class FileTree:
+    def __init__(self, config, base_path, base_dir, verbose=False):
+        self.base_path = base_path
+        self.base_dir = base_dir
+        self.verbose = verbose
+
+        # Find the files that participate in the parsing
+        self.active_files = []
+        active_globs = config.get('active_globs', ['**/*.py', ])
+        for pattern in active_globs:
+            self.active_files.extend(base_dir.glob(pattern))
+
+        # Find the files that specify a participation range
+        self.ranged_files_map = {}
+        for spec in config.get('ranged_files', {}).values():
+            token = spec['range']
+            for path in spec['files']:
+                ranged_path = _convert_path(base_path, Path(path))
+                self.ranged_files_map[ranged_path] = token
+
+        # Find the directories to skip
+        self.skip_dirs = []
+        for dirname in config.get('skip_dirs', []):
+            path = _convert_path(base_dir, Path(dirname))
+            self.skip_dirs.append(path)
+
+        # Other values from the config
+        self.skip_patterns = config.get('skip_patterns', [])
+        self.prefix = config.get('chapter_prefix', 'ch')
+        self.chapter_map = config.get('chapter_map', {})
+
+        # Build the file tree
+        self.root = DirNode(self.base_dir)
+        self._process_dir_node(self.root, base_dir)
+        self._find_biggest()
+
+        if self.verbose:
+            print('\n** File tree:')
+            _traverse(self.biggest, self.root, 'info')
+
+    def _process_dir_node(self, parent, dir_path):
+        for path in dir_path.iterdir():
+            # Skip any paths that are in our ignore_substrings list
+            skip = False
+            for pattern in self.skip_patterns:
+                if pattern in str(path):
+                    skip = True
+                    break
+
+            if skip:
+                # Path contained a skip pattern, don't process it
+                if self.verbose:
+                    print(f"Skipping {path} because of pattern={pattern}")
+                continue
+
+            try:
+                if path.is_dir():
+                    if path in self.skip_dirs:
+                        if self.verbose:
+                            print(f"Skipping {path} because it is in skip_dirs")
+
+                        continue
+                    elif path in self.ranged_files_map.keys():
+                        token = self.ranged_files_map[path]
+                        node = ConditionalDirNode(path, token)
+                    else:
+                        node = DirNode(path)
+
+                    parent.children.append(node)
+                    self._process_dir_node(node, node.path)
+                else:
+                    if path in self.active_files:
+                        if path in self.ranged_files_map.keys():
+                            token = self.ranged_files_map[path]
+                            node = ConditionalFileNode(path, token)
+                        else:
+                            node = FileNode(path)
+
+                        node.parse_file()
+                    else:
+                        node = CopyOnlyFileNode(path)
+
+                    parent.children.append(node)
+            except Exception as e:
+                raise e.__class__(f"Error parsing {path}. " + str(e))
+
+    def _find_biggest(self):
+        # Need to find the biggest upper bound, might be in the nodes, in the
+        # ranged map, or in the chapter map
+        max_node = self._find_biggest_in_nodes(self.root, 1)
+        max_chapter = int(sorted(self.chapter_map.keys())[0])
+
+        max_ranged = 1
+        for token in self.ranged_files_map.values():
+            lower, upper = range_token(token)
+            max_ranged = max(max_ranged, lower, upper)
+
+        # Find biggest chapter and how many digits are in it for padding
+        self.biggest = max(max_node, max_ranged, max_chapter)
+        self.digits = int(ceil(log(self.biggest + 1, 10)))
+
+    def _find_biggest_in_nodes(self, node, biggest=1):
+        result = biggest
+        if hasattr(node, "lower") and node.lower > result:
+            result = node.lower
+        if hasattr(node, "upper") and node.upper != -1 and node.upper > result:
+            result = node.upper
+
+        try:
+            for child in node.children:
+                if isinstance(child, DirNode):
+                    subresult = self._find_biggest_in_nodes(child, result)
+                    if subresult > result:
+                        result = subresult
+                elif isinstance(child, FileNode):
+                    if hasattr(child, 'highest') and child.highest > result:
+                        result = child.highest
+        except Exception as e:
+            raise e.__class__(f"Problem occurred processing {child.path} " \
+                + str(e))
+
+        return result
+
+    def generate(self, output_dir, single_chapter=None):
+        parent_path = self.base_dir.parent
+
+        if single_chapter is not None:
+            output_path = output_dir / Path(f"ch{single_chapter}")
+            _traverse(single_chapter, self.root, 'copy', single_chapter, 
+                parent_path, output_path)
+            return
+
+        # Generate whole range of chapters
+        for num in range(1, self.biggest + 1):
+            print(f'Creating chapter {num}')
+
+            # If this chapter is in the map, use the mapped suffix instead
+            if str(num) in self.chapter_map:
+                # Filename based on mapped suffix
+                filename = f"{self.prefix}{self.chapter_map[str(num)]}"
+            else:
+                # Filename based chapter number, padded based on largest number
+                filename = f"{self.prefix}{num:0{self.digits}}"
+
+            # Call the "copy" command, traversing the tree to generate the
+            # output
+            output_path = output_dir / Path(filename)
+            _traverse(num, self.root, 'copy', num, parent_path, output_path)
+
+# ===========================================================================
+# File Generation
+# ===========================================================================
+
+def generate_files(config_file, verbose=False, info_only=False, 
+        single_chapter=None):
     path = Path(config_file)
     path.resolve()
     base_path = path.parent
@@ -267,53 +210,18 @@ def generate_files(config_file):
         raise AttributeError(('The value for "src_dir" in the config file was '
             'not a valid directory'))
 
-    # Build the node filter that limits which files and directories
-    # participate 
-    node_filter = NodeFilter()
-    py_globs = config.get('python_globs', ['**/*.py', ])
-    node_filter.set_python_filter(py_globs, base_dir)
+    if info_only:
+        # If only showing info force verbose
+        verbose = True
 
-    ranged_files = config.get('ranged_files', {})
-    node_filter.set_ranged_file_filter(ranged_files, base_path)
+    # Build the tree and then generate the output
+    tree = FileTree(config, base_path, base_dir, verbose)
 
-    ignore_dirs = config.get('ignore_dirs', [])
-    node_filter.set_ignore_dirs(ignore_dirs, base_dir)
+    if info_only:
+        # Don't generate chapters, you're done
+        print('\n**Info only, no chapters generated')
+        exit()
 
-    node_filter.ignore_substrings = config.get('ignore_substrings', [])
-
-    # Create node structure
-    root = DirNode(base_dir)
-    _process_directory(root, base_dir, node_filter)
-
-    # DEBUG:
-    #_traverse(3, root, 'info')
-    #exit()
-
-    ### Generate output
-    parent_path = base_dir.parent
-    biggest = _find_biggest(root)
-    digits = int(ceil(log(biggest+1, 10)))
-
-    prefix = config.get('chapter_prefix', 'ch')
-    chapter_map = config.get('chapter_map', {})
-
-    # DEBUG: uncomment to generate a specific chapter
-    #num = 5
-    #output_path = output_dir / Path(f"ch{num}")
-    #_traverse(num, root, 'copy', num, parent_path, output_path)
-    #exit()
-
-    for num in range(1, biggest + 1):
-        print(f'Creating chapter {num}')
-
-        # If this chapter number is in the map, use the mapped suffix instead
-        if str(num) in chapter_map:
-            # Filename based on mapped suffix
-            filename = f"{prefix}{chapter_map[str(num)]}"
-        else:
-            # Filename based on chapter number, padded based on largest number
-            filename = f"{prefix}{num:0{digits}}"
-
-        # Call the "copy" command, traversing the tree to generate the output
-        output_path = output_dir / Path(filename)
-        _traverse(num, root, 'copy', num, parent_path, output_path)
+    if verbose:
+        print('\n**Processing')
+    tree.generate(output_dir, single_chapter)

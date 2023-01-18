@@ -146,9 +146,9 @@ relative to the TOML configuration file.
 Additional, optional configuration values are:
 
 * ``chapter_prefix`` -- Specify what the prefix part of a chapter directory is named. If not specified, defaults to "ch"
-* ``python_globs`` -- A glob pattern that indicates which files participate in the parsing. Files that don't match will be copied without processing. If not specified it defaults to ``**/*.py``, meaning all files ending in "\*.py"
-* ``ignore_dirs`` -- A list of sub-directories that should not be processed.
-* ``ignore_substrings`` -- A list of strings that if they show up in the path the path is ignored. Useful for things like `__pycache__`
+* ``active_globs`` -- A glob pattern that indicates which files participate in the parsing. Files that don't match will be copied without processing. If not specified it defaults to ``**/*.py``, meaning all files ending in "\*.py"
+* ``skip_dirs`` -- A list of sub-directories that should not be processed.
+* ``skip_patterns`` -- A list of strings that if they show up in the path the path is ignored. Useful for things like `__pycache__`
 * ``[chapter_map]`` -- Chapter numbers are integers, but you may not always want that in your output structure. This map allows you to change the suffix part of a chapter directory name. Keys in the map are the chapter numbers while values are what should be used in the chapter suffix.
 * ``[ranged_files.XYZ]`` -- Files or directories can be marked as conditional using this TOML map. This map must specify ``range`` and ``files`` attributes. The ``range`` attribute indicates what chapters this directory participates in, and ``files`` is listing of file or directory names. In the case of files they will only participate in parsing if the match the range value. If a file contains a marker outside the range it will be ignored. The ``XYZ`` portion of the TOML nested map is ignored, it is there so you can have multiple conditional directories.
 
@@ -158,8 +158,8 @@ Here is a full example of a configuration file:
 
     output_dir = 'last_output'
     src_dir = 'code'
-    ignore_dirs = ['bad_dir', ]
-    ignore_substrings = ['__pycache__', ]
+    skip_dirs = ['bad_dir', ]
+    skip_patterns = ['__pycache__', ]
 
     chapter_prefix = "chap"
 
@@ -188,8 +188,8 @@ If your code directory contained:
     code/bad_dir/something.py
 
 
-Then running ``juli`` with the sample configuration would result in the
-following:
+Then running ``juli example.toml``, the sample configuration would result
+in the following:
 
 .. code-block:: text
 
@@ -218,7 +218,24 @@ following:
 
 The ``script.py``, ``two_to_four.py``, and ``only24.py``  files will be
 processed for conditional content. The ``readme.txt`` and ``later_on.txt``
-files will be straight copies as they aren't covered by the Python glob.
+files will be straight copies as they aren't covered by the active glob.
+
+
+Command Line Arguments
+----------------------
+
+The ``juli`` has one required argument, the name of the ``TOML`` configuration
+file. It also supports the following optional arguments:
+
+* ``--help``, ``-h``: show help info
+* ``--verbose``, ``-v``: print information while processing
+* ``--info``, ``-i``: only print the info don't do the processing
+* ``--chapter CHAPTER``, ``-c CHAPTER``: process only the given chapter number
+  (CHAPTER)
+
+
+Uh, Oh
+------
 
 .. warning:: 
 

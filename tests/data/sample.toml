@@ -1,8 +1,8 @@
 output_dir = 'last_output'
 src_dir = 'code'
 chapter_prefix = "chap"
-ignore_dirs = ['not_here', ]
-ignore_substrings = ['__not_here__', ]
+skip_dirs = ['not_here', ]
+skip_patterns = ['__not_here__', ]
 
 [chapter_map]
 4 = 'Four'

@@ -1,3 +1,14 @@
+0.5.0
+=====
+
+* Once again modified a bunch of the keys in the TOML configuration file; you
+were warned it is ALPHA :)
+* Added command line arguments for verbose mode, info only mode, and to
+generate only a single chapter
+* Refactored a bunch of the file stuff into a class to make the above args
+change easier
+
+
 0.4.0
 =====
 

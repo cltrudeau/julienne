@@ -19,8 +19,17 @@ versions.
 
 parser.add_argument('config_file', help=HELP)
 
+parser.add_argument('-v', '--verbose', help="Print info while processing",
+    action='store_true', default=False)
+
+parser.add_argument('-i', '--info', help="Only show info, don't process",
+    action='store_true', default=False)
+
+parser.add_argument('-c', '--chapter', help="Only process a specific chapter",
+    type=int, default=None)
+
 # ===========================================================================
 
 def main():
     args = parser.parse_args()
-    generate_files(args.config_file)
+    generate_files(args.config_file, args.verbose, args.info, args.chapter)
