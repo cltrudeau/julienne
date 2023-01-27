@@ -5,7 +5,7 @@ import tomli
 
 from julienne.parser import range_token
 from julienne.nodes import (DirNode, ConditionalDirNode, FileNode,
-    ConditionalFileNode, CopyOnlyFileNode)
+    ConditionalFileNode, ConditionalCopyOnlyFileNode, CopyOnlyFileNode)
 
 # ===========================================================================
 # Utilities
@@ -112,6 +112,9 @@ class FileTree:
                             node = FileNode(path)
 
                         node.parse_file()
+                    elif path in self.ranged_files_map.keys():
+                        token = self.ranged_files_map[path]
+                        node = ConditionalCopyOnlyFileNode(path, token)
                     else:
                         node = CopyOnlyFileNode(path)
 

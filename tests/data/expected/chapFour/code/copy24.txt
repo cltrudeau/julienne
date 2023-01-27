@@ -4,3 +4,6 @@ should be copied only
 no processing should happen here
 
 #@= 3- this should not be processed an be here verbatim
+
+In the configuration this file is ranged, meaning it should only show from 2
+to 4.

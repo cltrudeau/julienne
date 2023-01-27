@@ -61,6 +61,27 @@ class CopyOnlyFileNode:
         shutil.copy2(self.path, dest)
 
 
+class ConditionalCopyOnlyFileNode:
+
+    def __init__(self, path, token):
+        self.path = path
+        self.lower, self.upper = range_token(token)
+
+    def info(self):
+        print(f'ConditionalCopyOnlyFileNode {self.lower} - {self.upper}')
+        print(f'   {self.path}')
+
+    def should_traverse(self, chapter):
+        return chapter_in_range(chapter, True, self.lower, self.upper)
+
+    def copy(self, chapter, base_path, output_path):
+        rel = self.path.relative_to(base_path)
+        dest = output_path / rel
+
+        if chapter_in_range(chapter, True, self.lower, self.upper):
+            shutil.copy2(self.path, dest)
+
+
 class FileNode:
 
     def __init__(self, path):

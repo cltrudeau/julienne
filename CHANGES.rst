@@ -1,3 +1,9 @@
+0.5.1
+=====
+
+* Fixed problem where ranged files wasn't working for copy-only files
+
+
 0.5.0
 =====
 

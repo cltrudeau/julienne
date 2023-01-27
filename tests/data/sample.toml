@@ -10,7 +10,7 @@ skip_patterns = ['__not_here__', ]
 
 [ranged_files.foo]
 range = '2-4'
-files = ['code/between24', 'code/only24.py']
+files = ['code/between24', 'code/only24.py', 'code/copy24.txt']
 
 [ranged_files.bar]
 range = '4-'
