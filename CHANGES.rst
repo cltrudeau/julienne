@@ -1,3 +1,9 @@
+0.6.0
+=====
+
+* Add ability to parse XML-style files
+
+
 0.5.1
 =====
 
