@@ -102,11 +102,14 @@ def parse_marker(text, line_no):
     try:
         jtype = text[0]
     except:
-        error = f"No marker type after '#@' in line {line_no}"
+        error = (f"No marker type after '@' in line {line_no}, must be one of"
+            ",".join(ALL_JTYPES) )
         raise ValueError
 
     if jtype not in ALL_JTYPES:
-        error = f"Unknown marker type on line {line_no}, *{text}*"
+        error = (f"Unknown marker type on line {line_no}, *{text}*, must be"
+            "one of '")
+        error += ",".join(ALL_JTYPES) + "'"
         raise ValueError(error)
 
     lower = None
@@ -239,5 +242,99 @@ def parse_pound_content(content):
     return parser
 
 # ---------------------------------------------------------------------------
+# XML Style parser
 
-# XML Parser Goes here
+def parse_xml_content(content):
+    """Parses a multi-line string containing code where the comment markers
+    are <!-- -->. Strings are turned into a sequence of lines.  Lines may be
+    conditional. Returns a list of Line objects along with whether all the
+    lines are conditional or not, and the ultimate lower and upper chapter
+    boundaries on the content.
+    """
+
+    # Strip trailing newlines before parsing
+    if content and content[-1] == '\n':
+        content = content[:-1]
+
+    parser = Parser(Parser.CONTENT_TYPES.XML)
+
+    # Loop through lines in content
+    for line_no, text in enumerate(content.split('\n')):
+        index = text.find("<!--@")
+        if index == -1:
+            # Check for block comment ending
+            pos = text.find("@+-->")
+            if pos != -1:
+                if parser.mode != ParseMode.BLOCK_COMMENT:
+                    error = ("Block closing marker '@+-->' found without "
+                        f"opener on line {line_no} *{text}*")
+                    raise ValueError(error)
+
+                # Remove the "@+--> " token from the text
+                line_text = text[0:pos].strip()
+
+                if line_text:
+                    parser.add_line(line_text, True, parser.block_header.lower, 
+                        parser.block_header.upper)
+
+                parser.reset_mode()
+                continue
+
+            # No marker, check if we're in an open block mode
+            if parser.mode in (ParseMode.BLOCK_OPEN, ParseMode.BLOCK_COMMENT):
+                # add conditional line based on parent
+                parser.add_line(text, True, parser.block_header.lower,
+                    parser.block_header.upper)
+                continue
+
+            # ELSE: not a juli comment, keep the line unconditionally
+            parser.add_line(text, False, None, None)
+            parser.all_conditional = False
+            parser.reset_mode()
+            continue
+
+        # Found a conditional line, behaviour changes based on the type of
+        # conditional, start by removing any closing XML comments, then parse
+        # the marker text
+        line_text = ''
+        closer = text.find("-->")
+        if closer != -1:
+            text = text[0:closer].rstrip()
+
+        marker = parse_marker(text[index+5:], line_no)
+
+        # Determine line text based on jtype
+        if marker.jtype == '=':
+            # Inline conditional, just this line, reset to normal mode
+            parser.reset_mode()
+            line_text = text[:index]
+            if marker.comment:
+                line_text += f"<!-- {marker.comment} -->"
+
+            if line_text:
+                parser.add_line(line_text, True, marker.lower, marker.upper)
+        elif marker.jtype == '+':
+            # Header for a block comment
+            parser.set_mode(ParseMode.BLOCK_COMMENT, marker)
+            parser.add_if_commented(text, index, marker)
+        elif marker.jtype == '-':
+            error = ("Unsupported marker type '-' for XML doc on line"
+                f"{line_no} *{text}*")
+            raise ValueError(error)
+        elif marker.jtype == '[':
+            # Header for an open block 
+            parser.set_mode(ParseMode.BLOCK_OPEN, marker)
+            parser.add_if_commented(text, index, marker)
+        elif marker.jtype == ']':
+            # Closing marker for open blocks, reset to normal
+            parser.reset_mode()
+            parser.add_if_commented(text, index, marker)
+
+        # Manage boundary range
+        if marker.jtype != ']':
+            # Boundaries for open block have been processed already, all other
+            # jtypes need to have their boundaries checked
+            parser.manage_boundaries(marker.lower, marker.upper)
+
+    parser.fix_boundaries()
+    return parser

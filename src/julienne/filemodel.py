@@ -5,7 +5,8 @@ import tomli
 
 from julienne.parsers import range_token
 from julienne.nodes import (DirNode, ConditionalDirNode, PoundFileNode,
-    ConditionalFileNode, ConditionalCopyOnlyFileNode, CopyOnlyFileNode)
+    ConditionalPoundFileNode, ConditionalCopyOnlyFileNode, CopyOnlyFileNode,
+    XMLFileNode, ConditionalXMLFileNode)
 
 # ===========================================================================
 # Utilities
@@ -41,9 +42,15 @@ class FileTree:
 
         # Find the Python style files that participate in the parsing
         self.pound_files = []
-        active_globs = config.get('pound_globs', ['**/*.py', ])
-        for pattern in active_globs:
+        globs = config.get('pound_globs', ['**/*.py', ])
+        for pattern in globs:
             self.pound_files.extend(base_dir.glob(pattern))
+
+        # Find the XML style files that participate in the parsing
+        self.xml_files = []
+        globs = config.get('xml_globs', ['**/*.xml', '**/*.htm', '**/*.html' ])
+        for pattern in globs:
+            self.xml_files.extend(base_dir.glob(pattern))
 
         # Find the files that specify a participation range
         self.ranged_files_map = {}
@@ -107,9 +114,17 @@ class FileTree:
                     if path in self.pound_files:
                         if path in self.ranged_files_map.keys():
                             token = self.ranged_files_map[path]
-                            node = ConditionalFileNode(path, token)
+                            node = ConditionalPoundFileNode(path, token)
                         else:
                             node = PoundFileNode(path)
+
+                        node.parse_file()
+                    elif path in self.xml_files:
+                        if path in self.ranged_files_map.keys():
+                            token = self.ranged_files_map[path]
+                            node = ConditionalXMLFileNode(path, token)
+                        else:
+                            node = XMLFileNode(path)
 
                         node.parse_file()
                     elif path in self.ranged_files_map.keys():

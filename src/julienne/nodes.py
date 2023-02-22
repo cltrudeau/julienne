@@ -1,12 +1,14 @@
 import shutil
 
-from julienne.parsers import parse_pound_content, range_token, chapter_in_range
+from julienne.parsers import (parse_pound_content, parse_xml_content, 
+    range_token, chapter_in_range)
 
 # ===========================================================================
 # Directory Nodes
 # ===========================================================================
 
 class DirNode:
+    """Node for directories in the file tree."""
 
     def __init__(self, path):
         self.path = path
@@ -26,6 +28,7 @@ class DirNode:
 
 
 class ConditionalDirNode(DirNode):
+    """Node for directories that participate conditionally."""
 
     def __init__(self, path, token):
         self.path = path
@@ -51,6 +54,7 @@ class ConditionalDirNode(DirNode):
 # ===========================================================================
 
 class CopyOnlyFileNode:
+    """Node for files that get copied but not parsed"""
 
     def __init__(self, path):
         self.path = path
@@ -67,6 +71,8 @@ class CopyOnlyFileNode:
 
 
 class ConditionalCopyOnlyFileNode:
+    """Node for files that get copied conditionally, but not parsed."""
+
 
     def __init__(self, path, token):
         self.path = path
@@ -87,13 +93,13 @@ class ConditionalCopyOnlyFileNode:
             shutil.copy2(self.path, dest)
 
 # ===========================================================================
-# Python Nodes
+# Parsing Node Base Classes
 # ===========================================================================
 
-class PoundFileNode:
-
+class _BaseFileNode:
     def __init__(self, path):
         self.path = path
+        self._parser_fn = None
 
     def parse_file(self):
         ### Done as a separate step to make testing easier, allows for
@@ -106,7 +112,7 @@ class PoundFileNode:
 
         :param content: string to parse
         """
-        self.parser = parse_pound_content(content)
+        self.parser = self._parser_fn(content)
         self.lowest = self.parser.lowest
         self.highest = self.parser.highest
         self.all_conditional = self.parser.all_conditional
@@ -116,7 +122,7 @@ class PoundFileNode:
         highest = getattr(self, 'highest', "Unset")
         all_cond = getattr(self, 'all_conditional', "Unset")
 
-        print('FileNode', lowest, highest, all_cond)
+        print(f'{self.__class__.__name__}', lowest, highest, all_cond)
         print(f'   {self.path}')
 
     def copy(self, chapter, base_path, output_path):
@@ -135,14 +141,9 @@ class PoundFileNode:
                     if content is not None:
                         f.write(content + "\n")
 
-
-class ConditionalFileNode(PoundFileNode):
-    def __init__(self, path, token):
-        self.lower, self.upper = range_token(token)
-        super().__init__(path)
-
+class ConditionalFileNodeMixin:
     def info(self):
-        print(f'ConditionalFileNode {self.lower} - {self.upper}')
+        print(f'{self.__class__.__name__} {self.lower} - {self.upper}')
         print(f'   {self.path}')
 
     def copy(self, chapter, base_path, output_path):
@@ -152,5 +153,39 @@ class ConditionalFileNode(PoundFileNode):
         super().copy(chapter, base_path, output_path)
 
 # ===========================================================================
+# Python File Nodes
+# ===========================================================================
+
+class PoundFileNode(_BaseFileNode):
+    """Node for Python style files, those with comments that are a #. These
+    are parsed and processed for every chapter."""
+    def __init__(self, path):
+        super().__init__(path)
+        self._parser_fn = parse_pound_content
+
+
+class ConditionalPoundFileNode(ConditionalFileNodeMixin, PoundFileNode):
+    """Node for Python style files, those with comments that are a #. These
+    are parsed and processed conditionally."""
+    def __init__(self, path, token):
+        self.lower, self.upper = range_token(token)
+        super().__init__(path)
+
+# ===========================================================================
 # XML Nodes
 # ===========================================================================
+
+class XMLFileNode(_BaseFileNode):
+    """Node for XML style files, those with comments that are a <!-- -->.
+    These are parsed and processed for every chapter."""
+    def __init__(self, path):
+        super().__init__(path)
+        self._parser_fn = parse_xml_content
+
+
+class ConditionalXMLFileNode(ConditionalFileNodeMixin, XMLFileNode):
+    """Node for XML style files, those with comments that are a <!-- -->.
+    These are parsed and processed for conditionally."""
+    def __init__(self, path, token):
+        self.lower, self.upper = range_token(token)
+        super().__init__(path)
