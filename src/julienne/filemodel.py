@@ -6,7 +6,7 @@ import tomli
 from julienne.parsers import range_token
 from julienne.nodes import (DirNode, ConditionalDirNode, PoundFileNode,
     ConditionalPoundFileNode, ConditionalCopyOnlyFileNode, CopyOnlyFileNode,
-    XMLFileNode, ConditionalXMLFileNode)
+    XMLFileNode, ConditionalXMLFileNode, _BaseFileNode)
 
 # ===========================================================================
 # Utilities
@@ -146,7 +146,10 @@ class FileTree:
         max_ranged = 1
         for token in self.ranged_files_map.values():
             lower, upper = range_token(token)
-            max_ranged = max(max_ranged, lower, upper)
+            if lower is not None and lower > max_ranged:
+                max_ranged = lower
+            if upper is not None and upper > max_ranged:
+                max_ranged = upper
 
         # Find biggest chapter and how many digits are in it for padding
         self.biggest = max(max_node, max_ranged, max_chapter)
@@ -154,9 +157,9 @@ class FileTree:
 
     def _find_biggest_in_nodes(self, node, biggest=1):
         result = biggest
-        if hasattr(node, "lower") and node.lower > result:
+        if node.lower is not None and node.lower > result:
             result = node.lower
-        if hasattr(node, "upper") and node.upper != -1 and node.upper > result:
+        if node.upper is not None and node.upper > result:
             result = node.upper
 
         try:
@@ -165,9 +168,10 @@ class FileTree:
                     subresult = self._find_biggest_in_nodes(child, result)
                     if subresult > result:
                         result = subresult
-                elif isinstance(child, PoundFileNode):
-                    if hasattr(child, 'highest') and child.highest > result:
-                        result = child.highest
+                elif isinstance(child, _BaseFileNode):
+                    if child.biggest is not None and child.biggest > result:
+                        result = child.biggest
+
         except Exception as e:
             raise e.__class__(f"Problem occurred processing {child.path} " \
                 + str(e))
@@ -237,9 +241,12 @@ def generate_files(config_file, verbose=False, info_only=False,
 
     if info_only:
         # Don't generate chapters, you're done
-        print('\n**Info only, no chapters generated')
+        print('\nLargest chapter detected', tree.biggest)
+        print('\n**Info only, no chapters generated**')
         exit()
 
     if verbose:
         print('\n**Processing')
     tree.generate(output_dir, single_chapter)
+
+    return tree

@@ -9,5 +9,7 @@ class BaseParserTestCase(TestCase):
             self.assertEqual(expected, result.content)
 
         self.assertEqual(all_conditional, parser.all_conditional)
-        self.assertEqual(lowest, parser.lowest)
-        self.assertEqual(highest, parser.highest)
+
+        bottom, top, _ = parser.get_range()
+        self.assertEqual(lowest, bottom)
+        self.assertEqual(highest, top)

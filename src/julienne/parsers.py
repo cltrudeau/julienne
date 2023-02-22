@@ -20,8 +20,6 @@ class Parser:
     def __init__(self, content_type):
         self.lines = []
         self.all_conditional = True
-        self.lowest = None
-        self.highest = None
         self.mode = ParseMode.NORMAL
         self.block_header = None
         self.content_type = content_type
@@ -50,29 +48,45 @@ class Parser:
         self.mode = mode
         self.block_header = block_header
 
-    def manage_boundaries(self, lower, upper):
-        if self.lowest is None:
-            self.lowest = lower
-        elif lower < self.lowest:
-            self.lowest = lower
+    def get_range(self):
+        """Returns range information about parsed file as a tuple (bottom,
+        top, biggest). Where bottom is the lowest chapter the file uses, top
+        is the highest chapter and None indicates limitless, and biggest is the
+        largest chapter number mentioned.
+        """
+        bottom = None
+        top = None
+        biggest = None
 
-        if self.highest is None:
-            self.highest = upper
-        else:
-            if upper == -1 or (upper != -1 and upper > self.highest):
-                self.highest = upper
+        for line in self.lines:
+            if bottom is None:
+                bottom = line.lower
+            if line.lower is not None and bottom < line.lower:
+                bottom = line.lower
 
-    def fix_boundaries(self):
-        if self.lowest is None:
-            self.lowest = 1
+            if top is None:
+                top = line.upper
+            if line.upper is not None and line.upper > top:
+                top = line.upper
 
-        if self.highest is None:
-            self.highest = -1
+            if biggest is None:
+                if line.lower is not None:
+                    biggest = line.lower
 
+                if line.upper is not None:
+                    biggest = line.upper
+            else:
+                if line.lower is not None and line.lower > biggest:
+                    biggest = line.lower
+                elif line.upper is not None and line.upper > biggest:
+                    biggest = line.upper
+
+        return bottom, top, biggest
+            
 # ===========================================================================
 
 chapter_in_range = lambda chapter, conditional, lower, upper: \
-    not conditional or (upper == -1 and lower <= chapter) or \
+    not conditional or (upper is None and lower <= chapter) or \
         (lower <= chapter <= upper)
 
 
@@ -92,9 +106,14 @@ def range_token(token):
         upper = token
 
     if upper == '':
-        upper = -1
+        upper = None
 
-    return int(lower), int(upper)
+    if lower is not None:
+        lower = int(lower)
+    if upper is not None:
+        upper = int(upper)
+
+    return lower, upper
 
 
 def parse_marker(text, line_no):
@@ -228,17 +247,6 @@ def parse_pound_content(content):
             parser.reset_mode()
             parser.add_if_commented(text, index, marker)
 
-        # Manage boundary range
-        if marker.jtype == '-':
-            # Block Comment body
-            parser.manage_boundaries(parser.block_header.lower,
-                parser.block_header.upper)
-        elif marker.jtype != ']':
-            # Boundaries for open block have been processed already, all other
-            # jtypes need to have their boundaries checked
-            parser.manage_boundaries(marker.lower, marker.upper)
-
-    parser.fix_boundaries()
     return parser
 
 # ---------------------------------------------------------------------------
@@ -330,11 +338,4 @@ def parse_xml_content(content):
             parser.reset_mode()
             parser.add_if_commented(text, index, marker)
 
-        # Manage boundary range
-        if marker.jtype != ']':
-            # Boundaries for open block have been processed already, all other
-            # jtypes need to have their boundaries checked
-            parser.manage_boundaries(marker.lower, marker.upper)
-
-    parser.fix_boundaries()
     return parser

@@ -1,3 +1,10 @@
+0.6.1
+=====
+
+* Fix bug where max chapter wasn't being found if it was on a conditional
+block
+
+
 0.6.0
 =====
 

@@ -55,12 +55,12 @@ class PoundParserTestCase(BaseParserTestCase):
         # Test a comment
         text = "# This is a sample file"
         parser = parse_pound_content(text)
-        self.assertParser(parser, False, [text,], 1, -1)
+        self.assertParser(parser, False, [text,], None, None)
 
         # Test a regular line
         text = 'a = "In all chapters"   # inline comment'
         parser = parse_pound_content(text)
-        self.assertParser(parser, False, [text,], 1, -1)
+        self.assertParser(parser, False, [text,], None, None)
 
         # Test a full-range conditional line with inline comment
         text = 'b = "In chapters 1-3"   #@= 1-3 comment on conditional'
@@ -78,7 +78,7 @@ class PoundParserTestCase(BaseParserTestCase):
         text = 'd = "In chapters 2 on"  #@= 2-'
         expected = 'd = "In chapters 2 on"  '
         parser = parse_pound_content(text)
-        self.assertParser(parser, True, [expected,], 2, -1)
+        self.assertParser(parser, True, [expected,], 2, None)
 
     def test_bad_parsing(self):
         text = 'x = 3 #@'
@@ -121,4 +121,4 @@ class PoundParserTestCase(BaseParserTestCase):
 
         # --- Test an uncommented conditional block
         parser = parse_pound_content(CODE_BLOCK3)
-        self.assertParser(parser, True, EXPECTED_BLOCK3, 2, -1)
+        self.assertParser(parser, True, EXPECTED_BLOCK3, 2, None)

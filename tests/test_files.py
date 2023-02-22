@@ -21,7 +21,10 @@ class SampleFilesTestCase(TestCase):
 
         # Generate results and compare to expected
         path = here / Path('data/sample.toml')
-        generate_files(str(path))
+        tree = generate_files(str(path))
+
+        # Verify that the sneaky reference to Chapter 6 is found
+        self.assertEqual(6, tree.biggest)
 
         expected = here / Path('data/expected')
 
