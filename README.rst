@@ -136,13 +136,10 @@ there must not be any white space between the comment marker and the ``@``. As
 with the Python-style, a marker type follows the opening. The types are as
 follows:
 
-* ``<!--@= 1-3 comment -->`` -- Inline marker, anything appearing before this
-on the line is included in the range.
-* ``<!--@+ 1-3 comment`` -- Opening for a block. Subsequent lines between this
-and the closing marker are conditional.
+* ``<!--@= 1-3 comment -->`` -- Inline marker, anything appearing before this on the line is included in the range.
+* ``<!--@+ 1-3 comment`` -- Opening for a block. Subsequent lines between this and the closing marker are conditional.
 * ``@+-->`` -- Closing for a block, must be paired with an opening
-* ``<!--@[ 1-3 comment -->`` -- opening for a block that is not commented out,
-all content until the matching closing marker is conditional
+* ``<!--@[ 1-3 comment -->`` -- opening for a block that is not commented out, all content until the matching closing marker is conditional
 * ``<!--@] -->`` -- closing maker for a block
 
 The same kinds of range specifiers are supported as Python-style (3, 1-3, 1-,
@@ -179,9 +176,7 @@ Additional, optional configuration values are:
 
 * ``chapter_prefix`` -- Specify what the prefix part of a chapter directory is named. If not specified, defaults to "ch"
 * ``pound_globs`` -- A glob pattern that indicates which Python-style files participate in the parsing. Defaults to ``['**/*.py', ]``, meaning all files ending in ".py"
-* ``xml_globs`` -- A glob pattern that indicates which XML-style files
-participate in the parsing. Defaults to ``['**/*.xml', '**/*.htm',
-'**/*.html']``, meaning all files ending in ".xml", ".htm", or ".html"
+* ``xml_globs`` -- A glob pattern that indicates which XML-style files participate in the parsing. Defaults to ``['**/*.xml', '**/*.htm', '**/*.html']``, meaning all files ending in ".xml", ".htm", or ".html"
 * ``skip_dirs`` -- A list of sub-directories that should not be processed.
 * ``skip_patterns`` -- A list of strings that if they show up in the path the path is ignored. Useful for things like `__pycache__`
 * ``[chapter_map]`` -- Chapter numbers are integers, but you may not always want that in your output structure. This map allows you to change the suffix part of a chapter directory name. Keys in the map are the chapter numbers while values are what should be used in the chapter suffix.

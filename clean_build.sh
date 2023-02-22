@@ -12,6 +12,8 @@ rm -rf build
 rm -rf dist
 python -m build
 
+twine check dist/*
+
 echo "------------------------"
 echo
 echo "now do:"
