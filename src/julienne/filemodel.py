@@ -3,8 +3,8 @@ from pathlib import Path
 
 import tomli
 
-from julienne.parser import range_token
-from julienne.nodes import (DirNode, ConditionalDirNode, FileNode,
+from julienne.parsers import range_token
+from julienne.nodes import (DirNode, ConditionalDirNode, PoundFileNode,
     ConditionalFileNode, ConditionalCopyOnlyFileNode, CopyOnlyFileNode)
 
 # ===========================================================================
@@ -39,11 +39,11 @@ class FileTree:
         self.base_dir = base_dir
         self.verbose = verbose
 
-        # Find the files that participate in the parsing
-        self.active_files = []
-        active_globs = config.get('active_globs', ['**/*.py', ])
+        # Find the Python style files that participate in the parsing
+        self.pound_files = []
+        active_globs = config.get('pound_globs', ['**/*.py', ])
         for pattern in active_globs:
-            self.active_files.extend(base_dir.glob(pattern))
+            self.pound_files.extend(base_dir.glob(pattern))
 
         # Find the files that specify a participation range
         self.ranged_files_map = {}
@@ -104,12 +104,12 @@ class FileTree:
                     parent.children.append(node)
                     self._process_dir_node(node, node.path)
                 else:
-                    if path in self.active_files:
+                    if path in self.pound_files:
                         if path in self.ranged_files_map.keys():
                             token = self.ranged_files_map[path]
                             node = ConditionalFileNode(path, token)
                         else:
-                            node = FileNode(path)
+                            node = PoundFileNode(path)
 
                         node.parse_file()
                     elif path in self.ranged_files_map.keys():
@@ -150,7 +150,7 @@ class FileTree:
                     subresult = self._find_biggest_in_nodes(child, result)
                     if subresult > result:
                         result = subresult
-                elif isinstance(child, FileNode):
+                elif isinstance(child, PoundFileNode):
                     if hasattr(child, 'highest') and child.highest > result:
                         result = child.highest
         except Exception as e:

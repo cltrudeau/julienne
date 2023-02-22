@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from waelstow import noted_raise
 
-from julienne.parser import parse_content
+from julienne.parsers import parse_pound_content
 
 # ============================================================================
 
@@ -65,48 +65,48 @@ class ParserTestCase(TestCase):
     def test_line_parsing(self):
         # Test a comment
         text = "# This is a sample file"
-        parser = parse_content(text)
+        parser = parse_pound_content(text)
         self.assertParser(parser, False, [text,], 1, -1)
 
         # Test a regular line
         text = 'a = "In all chapters"   # inline comment'
-        parser = parse_content(text)
+        parser = parse_pound_content(text)
         self.assertParser(parser, False, [text,], 1, -1)
 
         # Test a full-range conditional line with inline comment
         text = 'b = "In chapters 1-3"   #@= 1-3 comment on conditional'
         expected = 'b = "In chapters 1-3"   # comment on conditional'
-        parser = parse_content(text)
+        parser = parse_pound_content(text)
         self.assertParser(parser, True, [expected,], 1, 3)
 
         # Test lower open range conditional line
         text = 'c = "In chapters 1-2"   #@= -2'
         expected = 'c = "In chapters 1-2"   '
-        parser = parse_content(text)
+        parser = parse_pound_content(text)
         self.assertParser(parser, True, [expected,], 1, 2)
 
         # Test upper open range conditional line
         text = 'd = "In chapters 2 on"  #@= 2-'
         expected = 'd = "In chapters 2 on"  '
-        parser = parse_content(text)
+        parser = parse_pound_content(text)
         self.assertParser(parser, True, [expected,], 2, -1)
 
     def test_bad_parsing(self):
         text = 'x = 3 #@'
         with self.assertRaises(ValueError):
-            parse_content(text)
+            parse_pound_content(text)
 
         text = 'x = 3 #@*'
         with self.assertRaises(ValueError):
-            parse_content(text)
+            parse_pound_content(text)
 
     def test_block_parsing(self):
         #--- Test a conditional block
-        parser = parse_content(CODE_BLOCK1)
+        parser = parse_pound_content(CODE_BLOCK1)
         self.assertParser(parser, True, EXPECTED_BLOCK1, 3, 4)
 
         #--- Test a conditional block inside an indent
-        parser = parse_content(CODE_BLOCK2)
+        parser = parse_pound_content(CODE_BLOCK2)
         self.assertParser(parser, False, EXPECTED_BLOCK2, 1, 2)
 
         # Validate the non-conditional parts
@@ -131,5 +131,5 @@ class ParserTestCase(TestCase):
                     self.assertIsNone(content)
 
         # --- Test an uncommented conditional block
-        parser = parse_content(CODE_BLOCK3)
+        parser = parse_pound_content(CODE_BLOCK3)
         self.assertParser(parser, True, EXPECTED_BLOCK3, 2, -1)

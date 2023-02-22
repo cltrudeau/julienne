@@ -15,13 +15,16 @@ RANGED_JTYPES = ('=', '+', '[')
 # ===========================================================================
 
 class Parser:
-    def __init__(self):
+    CONTENT_TYPES = Enum('ParserContentTypes', ['POUND', 'XML'])
+
+    def __init__(self, content_type):
         self.lines = []
         self.all_conditional = True
         self.lowest = None
         self.highest = None
         self.mode = ParseMode.NORMAL
         self.block_header = None
+        self.content_type = content_type
 
     def add_line(self, text, conditional, lower, upper):
         line = Line(text, conditional, lower, upper)
@@ -31,7 +34,10 @@ class Parser:
         line_text = ''
         if marker.comment:
             # Marker line has a comment, preserve leading spaces and insert
-            line_text = text[0:index] + f"# {marker.comment}"
+            if self.content_type == self.CONTENT_TYPES.POUND:
+                line_text = text[0:index] + f"# {marker.comment}"
+            else:
+                line_text = text[0:index] + f"<!-- {marker.comment} -->"
 
         if line_text:
             self.add_line(line_text, True, marker.lower, marker.upper)
@@ -123,18 +129,43 @@ def parse_marker(text, line_no):
 
 # ---------------------------------------------------------------------------
 
-def parse_content(content):
-    """Parses a multi-line string into a series of lines. Each line may be
-    conditional. Returns a list of Line objects along with whether all the
-    lines are conditional or not, and the ultimate lower and upper chapter
-    boundaries on the content.
+class Line:
+    def __init__(self, content, conditional, lower, upper):
+        self.content = content
+        self.conditional = conditional
+        self.lower = lower
+        self.upper = upper
+
+    def get_content(self, chapter):
+        # Check if the line should be included, any of:
+        #   * not a conditional statement
+        #   * chapter is larger than lower and there is no upper bound
+        #   * chapter value is between lower and upper bounds
+        if self.content is not None and chapter_in_range(chapter, 
+                self.conditional, self.lower, self.upper):
+            return self.content
+
+        # Line not in chapter range
+        return None
+
+# ===========================================================================
+# Parsers
+# ===========================================================================
+
+# Python (pound-style comment) Parser
+
+def parse_pound_content(content):
+    """Parses a multi-line string containing code where the comment character
+    is a # into a series of lines. Each line may be conditional. Returns a
+    list of Line objects along with whether all the lines are conditional or
+    not, and the ultimate lower and upper chapter boundaries on the content.
     """
 
     # Strip trailing newlines before parsing
     if content and content[-1] == '\n':
         content = content[:-1]
 
-    parser = Parser()
+    parser = Parser(Parser.CONTENT_TYPES.POUND)
 
     # Loop through lines in content
     for line_no, text in enumerate(content.split('\n')):
@@ -209,21 +240,4 @@ def parse_content(content):
 
 # ---------------------------------------------------------------------------
 
-class Line:
-    def __init__(self, content, conditional, lower, upper):
-        self.content = content
-        self.conditional = conditional
-        self.lower = lower
-        self.upper = upper
-
-    def get_content(self, chapter):
-        # Check if the line should be included, any of:
-        #   * not a conditional statement
-        #   * chapter is larger than lower and there is no upper bound
-        #   * chapter value is between lower and upper bounds
-        if self.content is not None and chapter_in_range(chapter, 
-                self.conditional, self.lower, self.upper):
-            return self.content
-
-        # Line not in chapter range
-        return None
+# XML Parser Goes here

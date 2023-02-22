@@ -1,7 +1,9 @@
 import shutil
 
-from julienne.parser import parse_content, range_token, chapter_in_range
+from julienne.parsers import parse_pound_content, range_token, chapter_in_range
 
+# ===========================================================================
+# Directory Nodes
 # ===========================================================================
 
 class DirNode:
@@ -44,6 +46,9 @@ class ConditionalDirNode(DirNode):
         if chapter_in_range(chapter, True, self.lower, self.upper):
             new_dir.mkdir(parents=True, exist_ok=True)
 
+# ===========================================================================
+# Copy Only Nodes
+# ===========================================================================
 
 class CopyOnlyFileNode:
 
@@ -81,8 +86,11 @@ class ConditionalCopyOnlyFileNode:
         if chapter_in_range(chapter, True, self.lower, self.upper):
             shutil.copy2(self.path, dest)
 
+# ===========================================================================
+# Python Nodes
+# ===========================================================================
 
-class FileNode:
+class PoundFileNode:
 
     def __init__(self, path):
         self.path = path
@@ -98,7 +106,7 @@ class FileNode:
 
         :param content: string to parse
         """
-        self.parser = parse_content(content)
+        self.parser = parse_pound_content(content)
         self.lowest = self.parser.lowest
         self.highest = self.parser.highest
         self.all_conditional = self.parser.all_conditional
@@ -128,7 +136,7 @@ class FileNode:
                         f.write(content + "\n")
 
 
-class ConditionalFileNode(FileNode):
+class ConditionalFileNode(PoundFileNode):
     def __init__(self, path, token):
         self.lower, self.upper = range_token(token)
         super().__init__(path)
@@ -142,3 +150,7 @@ class ConditionalFileNode(FileNode):
             return
 
         super().copy(chapter, base_path, output_path)
+
+# ===========================================================================
+# XML Nodes
+# ===========================================================================
