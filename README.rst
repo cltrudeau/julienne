@@ -38,6 +38,8 @@ your code.
     c = "In chapters 1-2"   #@= -2
     d = "In chapters 2 on"  #@= 2-
 
+    #@@ 1-2 x = "In chapters 1-2"
+
     #@+ 3-4
     #@- e = "In chapters 3 to 4"  # inline comment
     #@- f = "  as a block"
@@ -64,28 +66,30 @@ Python-style ``juli`` comment markers start with ``#@`` followed by the
 julienne type which determines how the marker behaves. The types are as
 follows:
 
-* ``#@=`` -- A single line conditional to a range of chapters
+* ``#@=`` -- A single line conditional to a range of chapters, comment after the code
+* ``#@@`` -- Single line conditional to a range where code is commented out
 * ``#@+`` -- Start a conditional block that is commented out, applies to a range of chapters
 * ``#@-`` -- Part of a conditional block that is commented out. Must appear after a ``#@+``
 * ``#@[`` -- Start a conditional block that is not commented out, applies to a range of chapters
 * ``#@]`` -- End a conditional block that is not commented. Must appear after a ``#@[``
 
-The ``#@=``, ``#@+``, and ``#@[`` markers expect a range that indicates what
-chapters a line or block participates within. Ranges can indicate a single
-chapter, a range of chapters, up-to-and-including a chapter, and
-including-and-after a chapter. A space is expected between the julienne type 
-and the beginning of the range specifier. Example ranges:
+The ``#@=``, ``#@@`, ``#@+``, and ``#@[`` markers expect a range that
+indicates what chapters a line or block participates within. Ranges can
+indicate a single chapter, a range of chapters, up-to-and-including a chapter,
+and including-and-after a chapter. A space is expected between the julienne
+type and the beginning of the range specifier. Example ranges:
 
 * ``#@= 3`` -- this line only shows up in chapter 3
+* ``#@@ 2`` -- the code in the comment is uncommented in chapter 2
 * ``#@+ 2-4`` -- the following commented block is uncommented in chapters 2, 3, and 4
 * ``#@= 2-`` -- this line is in chapters 2 and above
 * ``#@[ -4`` -- the following uncommented block starts appearing in chapter 4
 
-The markers support trailing comments. Generated code will insert a comment
-without the ``juli`` marker containing whatever comes after your marker.
-Markers without trailing comments will not be included in the results. Any
-indentation before a marker is respected if the marked line results in 
-output.
+All markers except ``#@@`` support trailing comments. Generated code will
+insert a comment without the ``juli`` marker containing whatever comes after
+your marker.  Markers without trailing comments will not be included in the
+results. Any indentation before a marker is respected if the marked line
+results in output.
 
 The sample code above will generate four chapters. Chapter one would contain:
 
@@ -97,6 +101,7 @@ The sample code above will generate four chapters. Chapter one would contain:
     b = "In chapters 1-3"   # comment on conditional
     c = "In chapters 1-2"   
 
+    x = "In chapters 1-2"
 
     for x in range(10):
         # block header with comment

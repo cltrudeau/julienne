@@ -80,6 +80,12 @@ class PoundParserTestCase(BaseParserTestCase):
         parser = parse_pound_content(text)
         self.assertParser(parser, True, [expected,], 2, None)
 
+        # Test commented out line of code
+        text = '#@@ 1-2 count = 4'
+        expected = 'count = 4'
+        parser = parse_pound_content(text)
+        self.assertParser(parser, True, [expected, ], 1, 2)
+
     def test_bad_parsing(self):
         text = 'x = 3 #@'
         with self.assertRaises(ValueError):

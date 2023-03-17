@@ -1,0 +1,6 @@
+This is a text file
+that
+should be copied only
+no processing should happen here
+
+#@= 3- this should not be processed an be here verbatim

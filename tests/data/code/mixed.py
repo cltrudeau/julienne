@@ -5,6 +5,8 @@ b = "In chapters 1-3"   #@= 1-3 comment on conditional
 c = "In chapters 1-2"   #@= -2
 d = "In chapters 2 on"  #@= 2-
 
+#@@ 1-2 x = "In chapters 1-2"
+
 #@+ 3-4
 #@- e = "In chapters 3 to 4"  # inline comment
 #@- f = "  as a block"

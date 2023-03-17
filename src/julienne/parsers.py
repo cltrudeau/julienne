@@ -9,8 +9,8 @@ ParseMode = Enum('ParseMode', ['NORMAL', 'BLOCK_COMMENT', 'BLOCK_OPEN'])
 
 Marker = namedtuple('Marker', ["jtype", "lower", "upper", "comment"])
 
-ALL_JTYPES = ('=', '+', '-', '[', ']')
-RANGED_JTYPES = ('=', '+', '[')
+ALL_JTYPES = ('@', '=', '+', '-', '[', ']')
+RANGED_JTYPES = ('@', '=', '+', '[')
 
 # ===========================================================================
 
@@ -212,7 +212,8 @@ def parse_pound_content(content):
 
         # Determine line text based on jtype
         if marker.jtype == '=':
-            # Inline conditional, just this line, reset to normal mode
+            # Inline conditional, comment after the code
+            # Single line, reset to normal mode
             parser.reset_mode()
             line_text = text[:index]
             if marker.comment:
@@ -220,6 +221,16 @@ def parse_pound_content(content):
 
             if line_text:
                 parser.add_line(line_text, True, marker.lower, marker.upper)
+        elif marker.jtype == '@':
+            # Inline conditional, comment before code (code is commented out)
+            # Single line, reset to normal mode
+            parser.reset_mode()
+
+            # For other types, the comment comes after the type and the
+            # boundary, in this case the "comment" is the code to be used
+            if marker.comment:
+                parser.add_line(marker.comment, True, marker.lower,
+                    marker.upper)
         elif marker.jtype == '+':
             # Header for a block comment
             parser.set_mode(ParseMode.BLOCK_COMMENT, marker)

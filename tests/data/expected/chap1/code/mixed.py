@@ -4,6 +4,8 @@ a = "In all chapters"   # inline comment
 b = "In chapters 1-3"   # comment on conditional
 c = "In chapters 1-2"   
 
+x = "In chapters 1-2"
+
 
 for x in range(10):
     # block header with comment

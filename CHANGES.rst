@@ -1,3 +1,9 @@
+0.7.0
+=====
+
+* add "#@@" tag, allowing you to comment out code in a single line 
+
+
 0.6.1
 =====
 
