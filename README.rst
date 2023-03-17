@@ -179,7 +179,9 @@ relative to the TOML configuration file.
 
 Additional, optional configuration values are:
 
+* ``black`` -- if true (TOML uses lower case), runs the black formatting processor on your output code directories. Defaults to false.
 * ``chapter_prefix`` -- Specify what the prefix part of a chapter directory is named. If not specified, defaults to "ch"
+* ``delete_output`` -- if true (TOML uses lower case), removes any existing output directory before generating a new one. Defaults to false.
 * ``pound_globs`` -- A glob pattern that indicates which Python-style files participate in the parsing. Defaults to ``['**/*.py', ]``, meaning all files ending in ".py"
 * ``xml_globs`` -- A glob pattern that indicates which XML-style files participate in the parsing. Defaults to ``['**/*.xml', '**/*.htm', '**/*.html']``, meaning all files ending in ".xml", ".htm", or ".html"
 * ``skip_dirs`` -- A list of sub-directories that should not be processed.

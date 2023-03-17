@@ -1,4 +1,3 @@
-import shutil
 from difflib import Differ
 from filecmp import cmp
 from pathlib import Path
@@ -9,25 +8,8 @@ from julienne.filemodel import generate_files
 # ============================================================================
 
 class SampleFilesTestCase(TestCase):
-    def test_e2e(self):
-        here = Path(__file__).parent
 
-        # Remove files from last run, create output directory
-        output = here / Path('data/last_output')
-        if output.exists():
-            shutil.rmtree(output)
-
-        output.mkdir(parents=True)
-
-        # Generate results and compare to expected
-        path = here / Path('data/sample.toml')
-        tree = generate_files(str(path))
-
-        # Verify that the sneaky reference to Chapter 6 is found
-        self.assertEqual(6, tree.biggest)
-
-        expected = here / Path('data/expected')
-
+    def assert_directory_match(self, expected, output):
         # Validate directory listing is the same
         expected_set = {p.relative_to(expected) for p in expected.rglob('*')}
         output_set = {p.relative_to(output) for p in output.rglob('*')}
@@ -54,6 +36,21 @@ class SampleFilesTestCase(TestCase):
                     "".join(list(result))
                 raise AssertionError(error)
 
+    def test_e2e(self):
+        here = Path(__file__).parent
+        output = here / Path('data/last_output')
+
+        # Generate results and compare to expected
+        path = here / Path('data/sample.toml')
+        tree = generate_files(str(path))
+
+        # Verify that the sneaky reference to Chapter 6 is found
+        self.assertEqual(6, tree.biggest)
+
+        expected = here / Path('data/expected')
+
+        self.assert_directory_match(expected, output)
+
     def test_failures(self):
         here = Path(__file__).parent
         path = here / Path('data/fail.toml')
@@ -64,3 +61,14 @@ class SampleFilesTestCase(TestCase):
         error = context.exception
         self.assertIn("bad_code/bad_marker.py", str(error))
         self.assertIn("Unknown marker type", str(error))
+
+    def test_darkgrey(self):
+        here = Path(__file__).parent
+        output = here / Path('data/darkgrey/last_output')
+
+        # Generate results and compare to expected
+        path = here / Path('data/darkgrey/grey.toml')
+        generate_files(str(path))
+        expected = here / Path('data/darkgrey/expected')
+
+        self.assert_directory_match(expected, output)

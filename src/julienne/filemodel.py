@@ -1,5 +1,7 @@
 from math import log, ceil
 from pathlib import Path
+import shutil
+import sys
 
 import tomli
 
@@ -141,7 +143,10 @@ class FileTree:
         # Need to find the biggest upper bound, might be in the nodes, in the
         # ranged map, or in the chapter map
         max_node = self._find_biggest_in_nodes(self.root, 1)
-        max_chapter = int(sorted(self.chapter_map.keys())[0])
+        try:
+            max_chapter = int(sorted(self.chapter_map.keys())[0])
+        except IndexError:
+            max_chapter = 1
 
         max_ranged = 1
         for token in self.ranged_files_map.values():
@@ -245,8 +250,25 @@ def generate_files(config_file, verbose=False, info_only=False,
         print('\n**Info only, no chapters generated**')
         exit()
 
+    # Optionally remove the output directory before processing
+    if config.get('delete_output', False):
+        print('\n**Removing existing output directory')
+        if output_dir.exists():
+            shutil.rmtree(output_dir)
+
     if verbose:
         print('\n**Processing')
     tree.generate(output_dir, single_chapter)
+
+    # Optionally run black on the output
+    if config.get('black', False):
+        print('\n**Calling black')
+        sys.argv = ['black', str(output_dir), '-l', 80]
+        try:
+            import black    # import only if being used
+            black.main()
+        except SystemExit:
+            # black calls quit(), ignore it
+            pass
 
     return tree

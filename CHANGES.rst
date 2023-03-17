@@ -1,7 +1,9 @@
 0.7.0
 =====
 
-* add "#@@" tag, allowing you to comment out code in a single line 
+* Add "#@@" tag, allowing you to comment out code in a single line 
+* Add ability to call black on generated output
+* Add ability to remove the output directory before generating it
 
 
 0.6.1
