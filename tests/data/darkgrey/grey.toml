@@ -1,0 +1,3 @@
+output_dir = 'last_output'
+src_dir = 'code'
+black = true
