@@ -17,13 +17,36 @@ RANGED_JTYPES = ('@', '=', '+', '[')
 class Parser:
     CONTENT_TYPES = Enum('ParserContentTypes', ['POUND', 'XML'])
 
+    class Context:
+        def __init__(self, mode, marker):
+            self.mode = mode
+            self.marker = marker
+
     def __init__(self, content_type):
         self.lines = []
         self.all_conditional = True
-        self.mode = ParseMode.NORMAL
-        self.block_header = None
         self.content_type = content_type
 
+        context = Parser.Context(ParseMode.NORMAL, None)
+        self.stack = [context, ]
+
+    # --- Stack and mode methods to deal with nested markers
+    def nest(self, mode, marker):
+        context = Parser.Context(mode, marker)
+        self.stack.append(context)
+
+    def close_nest(self):
+        self.stack.pop()
+
+    @property
+    def parent_marker(self):
+        return self.stack[-1].marker
+
+    @property
+    def mode(self):
+        return self.stack[-1].mode
+
+    # --- Line management
     def add_line(self, text, conditional, lower, upper):
         line = Line(text, conditional, lower, upper)
         self.lines.append(line)
@@ -39,14 +62,6 @@ class Parser:
 
         if line_text:
             self.add_line(line_text, True, marker.lower, marker.upper)
-
-    def reset_mode(self):
-        self.mode = ParseMode.NORMAL
-        self.block_header = None
-
-    def set_mode(self, mode, block_header):
-        self.mode = mode
-        self.block_header = block_header
 
     def get_range(self):
         """Returns range information about parsed file as a tuple (bottom,
@@ -195,13 +210,15 @@ def parse_pound_content(content):
         if index == -1:
             if parser.mode == ParseMode.BLOCK_OPEN:
                 # Inside an open block, add conditional line based on parent
-                parser.add_line(text, True, parser.block_header.lower,
-                    parser.block_header.upper)
+                parent = parser.parent_marker
+                parser.add_line(text, True, parent.lower, parent.upper)
             else:
                 # No juli comment, keep the line unconditionally
                 parser.add_line(text, False, None, None)
-                parser.reset_mode()
                 parser.all_conditional = False
+
+                if parser.mode == ParseMode.BLOCK_COMMENT:
+                    parser.close_nest()
 
             continue
 
@@ -211,21 +228,24 @@ def parse_pound_content(content):
         marker = parse_marker(text[index+2:], line_no)
 
         # Determine line text based on jtype
+        if parser.mode == ParseMode.BLOCK_COMMENT and marker.jtype != '-':
+            # Anything besides a "-" marker pops the context stack
+            parser.close_nest()
+
         if marker.jtype == '=':
             # Inline conditional, comment after the code
-            # Single line, reset to normal mode
-            parser.reset_mode()
             line_text = text[:index]
             if marker.comment:
                 line_text += f"# {marker.comment}"
+            else:
+                # Remove any trailing spaces if there was no comment,
+                # especially useful if you're running black after
+                line_text = line_text.rstrip()
 
             if line_text:
                 parser.add_line(line_text, True, marker.lower, marker.upper)
         elif marker.jtype == '@':
             # Inline conditional, comment before code (code is commented out)
-            # Single line, reset to normal mode
-            parser.reset_mode()
-
             # For other types, the comment comes after the type and the
             # boundary, in this case the "comment" is the code to be used
             if marker.comment:
@@ -233,7 +253,7 @@ def parse_pound_content(content):
                     marker.upper)
         elif marker.jtype == '+':
             # Header for a block comment
-            parser.set_mode(ParseMode.BLOCK_COMMENT, marker)
+            parser.nest(ParseMode.BLOCK_COMMENT, marker)
             parser.add_if_commented(text, index, marker)
         elif marker.jtype == '-':
             # Body for a block comment
@@ -247,15 +267,15 @@ def parse_pound_content(content):
             line_text = text[0:index] + text[index+4:]
 
             if line_text:
-                parser.add_line(line_text, True, parser.block_header.lower, 
-                    parser.block_header.upper)
+                parent = parser.parent_marker
+                parser.add_line(line_text, True, parent.lower, parent.upper)
         elif marker.jtype == '[':
             # Header for an open block 
-            parser.set_mode(ParseMode.BLOCK_OPEN, marker)
+            parser.nest(ParseMode.BLOCK_OPEN, marker)
             parser.add_if_commented(text, index, marker)
         elif marker.jtype == ']':
             # Closing marker for open blocks, reset to normal
-            parser.reset_mode()
+            parser.close_nest()
             parser.add_if_commented(text, index, marker)
 
     return parser
@@ -293,23 +313,22 @@ def parse_xml_content(content):
                 line_text = text[0:pos].strip()
 
                 if line_text:
-                    parser.add_line(line_text, True, parser.block_header.lower, 
-                        parser.block_header.upper)
+                    parent = parser.parent_marker
+                    parser.add_line(line_text, True, parent.lower, parent.upper)
 
-                parser.reset_mode()
+                parser.close_nest()
                 continue
 
             # No marker, check if we're in an open block mode
             if parser.mode in (ParseMode.BLOCK_OPEN, ParseMode.BLOCK_COMMENT):
                 # add conditional line based on parent
-                parser.add_line(text, True, parser.block_header.lower,
-                    parser.block_header.upper)
+                parent = parser.parent_marker
+                parser.add_line(text, True, parent.lower, parent.upper)
                 continue
 
             # ELSE: not a juli comment, keep the line unconditionally
             parser.add_line(text, False, None, None)
             parser.all_conditional = False
-            parser.reset_mode()
             continue
 
         # Found a conditional line, behaviour changes based on the type of
@@ -324,8 +343,7 @@ def parse_xml_content(content):
 
         # Determine line text based on jtype
         if marker.jtype == '=':
-            # Inline conditional, just this line, reset to normal mode
-            parser.reset_mode()
+            # Inline conditional, just this line
             line_text = text[:index]
             if marker.comment:
                 line_text += f"<!-- {marker.comment} -->"
@@ -334,7 +352,7 @@ def parse_xml_content(content):
                 parser.add_line(line_text, True, marker.lower, marker.upper)
         elif marker.jtype == '+':
             # Header for a block comment
-            parser.set_mode(ParseMode.BLOCK_COMMENT, marker)
+            parser.nest(ParseMode.BLOCK_COMMENT, marker)
             parser.add_if_commented(text, index, marker)
         elif marker.jtype == '-':
             error = ("Unsupported marker type '-' for XML doc on line"
@@ -342,11 +360,11 @@ def parse_xml_content(content):
             raise ValueError(error)
         elif marker.jtype == '[':
             # Header for an open block 
-            parser.set_mode(ParseMode.BLOCK_OPEN, marker)
+            parser.nest(ParseMode.BLOCK_OPEN, marker)
             parser.add_if_commented(text, index, marker)
         elif marker.jtype == ']':
             # Closing marker for open blocks, reset to normal
-            parser.reset_mode()
+            parser.close_nest()
             parser.add_if_commented(text, index, marker)
 
     return parser

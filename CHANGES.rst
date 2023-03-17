@@ -1,3 +1,9 @@
+0.7.1
+=====
+
+* Now supports nested markers
+
+
 0.7.0
 =====
 

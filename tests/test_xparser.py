@@ -1,3 +1,5 @@
+import textwrap
+
 from waelstow import noted_raise
 
 from tests.base import BaseParserTestCase
@@ -79,6 +81,59 @@ class XMLParserTestCase(BaseParserTestCase):
         expected = 'In chapters 2 on  '
         parser = parse_xml_content(text)
         self.assertParser(parser, True, [expected,], 2, None)
+
+    def test_nested_parsing(self):
+        data = {
+            'a': '12345',
+            'b': '2345',
+            'c': '3',
+            'e': '5',
+            'f': '34',
+            'g': '3',
+            'h': '4',
+            'i': '2345',
+        }
+        code = f"""\
+            a = {data['a']}
+
+            <!--@[ 2-
+
+            b = {data['b']}
+            c = {data['c']}  <!--@= 3 -->
+
+            <!--@+ 5
+            e = {data['e']}
+            @+-->
+
+            <!--@[ 3-4
+
+            f = {data['f']}
+            g = {data['g']} <!--@= 3 -->
+
+            <!--@+ 4
+            h = {data['h']}
+            @+-->
+
+            <!--@] -->
+
+            i = {data['i']}
+
+            <!--@] -->
+        """
+        code = textwrap.dedent(code)
+        parser = parse_xml_content(code)
+
+        for line in parser.lines:
+            if line.content == '':
+                continue
+
+            #print("Testing ", line.content)
+            #print("   ", line.lower, line.upper)
+
+            lower = 1 if line.lower is None else line.lower
+            upper = 5 if line.upper is None else line.upper
+            for num in range(lower, upper + 1):
+                self.assertIn(str(num), line.content)
 
     def test_bad_parsing(self):
         text = 'x = 3 <!--@ -->'

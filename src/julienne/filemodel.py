@@ -263,6 +263,7 @@ def generate_files(config_file, verbose=False, info_only=False,
     # Optionally run black on the output
     if config.get('black', False):
         print('\n**Calling black')
+        #sys.argv = ['black', str(output_dir), '-l', 80, '--diff']
         sys.argv = ['black', str(output_dir), '-l', 80]
         try:
             import black    # import only if being used

@@ -2,8 +2,8 @@
 
 a = "In all chapters"   # inline comment
 b = "In chapters 1-3"   # comment on conditional
-c = "In chapters 1-2"   
-d = "In chapters 2 on"  
+c = "In chapters 1-2"
+d = "In chapters 2 on"
 
 
 for x in range(10):
