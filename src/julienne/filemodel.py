@@ -32,6 +32,23 @@ def _traverse(chapter, node, cmd, *args):
             fn = getattr(child, cmd)
             fn(*args)
 
+
+def _walk_node(node):
+    if isinstance(node, DirNode):
+        for child in node.children:
+            yield from _walk_node(child)
+    else:
+        yield node
+
+
+def _print_node_contents(node):
+    print("***", node.path)
+    if isinstance(node, _BaseFileNode):
+        for line in node.parser.lines:
+            lower = '*' if line.lower is None else str(line.lower)
+            upper = '*' if line.upper is None else str(line.upper)
+            print(f"{lower:>2}-{upper:2} |", line.content)
+
 # ===========================================================================
 # File Tree
 # ===========================================================================
@@ -214,7 +231,7 @@ class FileTree:
 # ===========================================================================
 
 def generate_files(config_file, verbose=False, info_only=False, 
-        single_chapter=None):
+        single_chapter=None, debug=''):
     path = Path(config_file)
     path.resolve()
     base_path = path.parent
@@ -243,6 +260,18 @@ def generate_files(config_file, verbose=False, info_only=False,
 
     # Build the tree and then generate the output
     tree = FileTree(config, base_path, base_dir, verbose)
+
+    if debug:
+        # Debug mode, show all the line info for everything in matching files
+        match = False
+        for node in _walk_node(tree.root):
+            if debug in str(node.path):
+                match = True
+                _print_node_contents(node)
+
+        if not match:
+            print(f"!!! No file name matching *{debug}*")
+        exit()
 
     if info_only:
         # Don't generate chapters, you're done
@@ -273,3 +302,22 @@ def generate_files(config_file, verbose=False, info_only=False,
             pass
 
     return tree
+
+# ===========================================================================
+# File Display
+# ===========================================================================
+
+def display_pound_files(files):
+    for filename in files:
+        path = Path(filename)
+        node = PoundFileNode(path)
+        node.parse_file()
+        _print_node_contents(node)
+
+
+def display_xml_files(files):
+    for filename in files:
+        path = Path(filename)
+        node = XMLFileNode(path)
+        node.parse_file()
+        _print_node_contents(node)

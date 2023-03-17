@@ -1,3 +1,15 @@
+0.7.2
+=====
+
+* Add debug command line argument that allows you to see the contents of a
+file including the range of each line
+* Add -p and -x debug tools for using the parser directly on a Python or XML
+file
+* Fixed bug in nesting code that didn't handle leaving a BLOCK_COMMENT
+properly
+* Fixed bug where #@- markers without text weren't leave a blank line
+
+
 0.7.1
 =====
 

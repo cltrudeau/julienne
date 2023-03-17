@@ -213,12 +213,18 @@ def parse_pound_content(content):
                 parent = parser.parent_marker
                 parser.add_line(text, True, parent.lower, parent.upper)
             else:
-                # No juli comment, keep the line unconditionally
-                parser.add_line(text, False, None, None)
-                parser.all_conditional = False
-
+                # No juli comment, could be closing the block
                 if parser.mode == ParseMode.BLOCK_COMMENT:
                     parser.close_nest()
+
+                if len(parser.stack) == 1:
+                    # Not nested, keep the line unconditionally
+                    parser.add_line(text, False, None, None)
+                    parser.all_conditional = False
+                else:
+                    # Nested, keep the line using parent's conditions
+                    parent = parser.parent_marker
+                    parser.add_line(text, True, parent.lower, parent.upper)
 
             continue
 
@@ -265,10 +271,8 @@ def parse_pound_content(content):
             # Remove the "#@- " token from the text, preserve any leading
             # spaces
             line_text = text[0:index] + text[index+4:]
-
-            if line_text:
-                parent = parser.parent_marker
-                parser.add_line(line_text, True, parent.lower, parent.upper)
+            parent = parser.parent_marker
+            parser.add_line(line_text, True, parent.lower, parent.upper)
         elif marker.jtype == '[':
             # Header for an open block 
             parser.nest(ParseMode.BLOCK_OPEN, marker)
