@@ -12,7 +12,7 @@ common to each copy.
 Enter: julienne. It slices, it dices, well... it actually only slices. This
 library comes with the ``juli`` script which reads code and interprets special
 directives in the comments, generating multiple versions of the code. The
-directives allow you to limit which versions a block of code exists in. 
+directives allow you to limit which versions a block of code exists in.
 
 The goal for this toolset once complete is to allow you to maintain a single
 version of your project in its completed state. Running ``juli`` on your
@@ -72,6 +72,7 @@ follows:
 * ``#@-`` -- Part of a conditional block that is commented out. Must appear after a ``#@+``
 * ``#@[`` -- Start a conditional block that is not commented out, applies to a range of chapters
 * ``#@]`` -- End a conditional block that is not commented. Must appear after a ``#@[``
+* ``#@*`` -- A julienne comment, one not included in the output code
 
 The ``#@=``, ``#@@`, ``#@+``, and ``#@[`` markers expect a range that
 indicates what chapters a line or block participates within. Ranges can
@@ -99,7 +100,7 @@ The sample code above will generate four chapters. Chapter one would contain:
 
     a = "In all chapters"   # inline comment
     b = "In chapters 1-3"   # comment on conditional
-    c = "In chapters 1-2"   
+    c = "In chapters 1-2"
 
     x = "In chapters 1-2"
 
@@ -116,7 +117,7 @@ Chapter four would contain:
     # This is a sample file
 
     a = "In all chapters"   # inline comment
-    d = "In chapters 2 on"  
+    d = "In chapters 2 on"
 
     e = "In chapters 3 to 4"  # inline comment
     f = "  as a block"
@@ -146,6 +147,7 @@ follows:
 * ``@+-->`` -- Closing for a block, must be paired with an opening
 * ``<!--@[ 1-3 comment -->`` -- opening for a block that is not commented out, all content until the matching closing marker is conditional
 * ``<!--@] -->`` -- closing maker for a block
+* ``<!--@* -->`` -- a julienne comment, one not included in the output code, **only use on a single line!**
 
 The same kinds of range specifiers are supported as Python-style (3, 1-3, 1-,
 and -3). Any additional text found in a comment marker is added as a comment
@@ -161,17 +163,17 @@ must contain two key/value pairs that indicate the source and output
 directories for the parser.
 
 
-.. code-block:: TOML 
+.. code-block:: TOML
 
     output_dir = 'last_output'
     src_dir = 'code'
 
 
-The above will cause ``juli`` to look for a directory named ``code`` relative 
-to the configuration file. The source found in that directory will be parsed. 
+The above will cause ``juli`` to look for a directory named ``code`` relative
+to the configuration file. The source found in that directory will be parsed.
 The generated chapters will be put in a directory named ``last_output``. If
-your source specified two chapters, running ``juli`` will result in the 
-creation of two directories: ``last_output/ch1/code`` and 
+your source specified two chapters, running ``juli`` will result in the
+creation of two directories: ``last_output/ch1/code`` and
 ``last_output/ch2/code``.
 
 Both the ``output_dir`` and ``src_dir`` values can be absolute paths or
@@ -191,7 +193,7 @@ Additional, optional configuration values are:
 
 Here is a full example of a configuration file:
 
-.. code-block:: TOML 
+.. code-block:: TOML
 
     output_dir = 'last_output'
     src_dir = 'code'
@@ -211,7 +213,7 @@ Here is a full example of a configuration file:
     [ranged_files.bar]
     range = '4-'
     files = ['code/after4', ]
-        
+
 
 If your code directory contained:
 

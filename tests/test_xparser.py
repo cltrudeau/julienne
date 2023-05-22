@@ -140,7 +140,7 @@ class XMLParserTestCase(BaseParserTestCase):
         with self.assertRaises(ValueError):
             parse_xml_content(text)
 
-        text = 'x = 3 <!--@* -->'
+        text = 'x = 3 <!--@! -->'
         with self.assertRaises(ValueError):
             parse_xml_content(text)
 
@@ -161,7 +161,7 @@ class XMLParserTestCase(BaseParserTestCase):
                 content = parser.lines[3].get_content(chapter)
                 self.assertIsNotNone(content)
 
-                # Line[1] and Line[2] are conditional, showing in 
+                # Line[1] and Line[2] are conditional, showing in
                 # chapters 1-2 only
                 if chapter <= 2:
                     content = parser.lines[1].get_content(chapter)

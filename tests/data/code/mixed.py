@@ -1,3 +1,4 @@
+#@* This comment isn't included in the output
 # This is a sample file
 
 a = "In all chapters"   # inline comment

@@ -148,7 +148,7 @@ class PoundParserTestCase(BaseParserTestCase):
         with self.assertRaises(ValueError):
             parse_pound_content(text)
 
-        text = 'x = 3 #@*'
+        text = 'x = 3 #@!'
         with self.assertRaises(ValueError):
             parse_pound_content(text)
 

@@ -9,7 +9,7 @@ ParseMode = Enum('ParseMode', ['NORMAL', 'BLOCK_COMMENT', 'BLOCK_OPEN'])
 
 Marker = namedtuple('Marker', ["jtype", "lower", "upper", "comment"])
 
-ALL_JTYPES = ('@', '=', '+', '-', '[', ']')
+ALL_JTYPES = ('@', '=', '+', '-', '[', ']', '*')
 RANGED_JTYPES = ('@', '=', '+', '[')
 
 # ===========================================================================
@@ -97,7 +97,7 @@ class Parser:
                     biggest = line.upper
 
         return bottom, top, biggest
-            
+
 # ===========================================================================
 
 chapter_in_range = lambda chapter, conditional, lower, upper: \
@@ -274,13 +274,16 @@ def parse_pound_content(content):
             parent = parser.parent_marker
             parser.add_line(line_text, True, parent.lower, parent.upper)
         elif marker.jtype == '[':
-            # Header for an open block 
+            # Header for an open block
             parser.nest(ParseMode.BLOCK_OPEN, marker)
             parser.add_if_commented(text, index, marker)
         elif marker.jtype == ']':
             # Closing marker for open blocks, reset to normal
             parser.close_nest()
             parser.add_if_commented(text, index, marker)
+        elif marker.jtype == '*':
+            # Juli comment, do nothing
+            pass
 
     return parser
 
@@ -363,12 +366,15 @@ def parse_xml_content(content):
                 f"{line_no} *{text}*")
             raise ValueError(error)
         elif marker.jtype == '[':
-            # Header for an open block 
+            # Header for an open block
             parser.nest(ParseMode.BLOCK_OPEN, marker)
             parser.add_if_commented(text, index, marker)
         elif marker.jtype == ']':
             # Closing marker for open blocks, reset to normal
             parser.close_nest()
             parser.add_if_commented(text, index, marker)
+        elif marker.jtype == '*':
+            # Juli comment, do nothing
+            pass
 
     return parser

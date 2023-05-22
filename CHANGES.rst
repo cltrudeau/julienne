@@ -1,3 +1,9 @@
+0.8
+===
+
+* Add ability to write a comment not included in the output code
+
+
 0.7.2
 =====
 
