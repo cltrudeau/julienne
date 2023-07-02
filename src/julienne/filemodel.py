@@ -289,6 +289,18 @@ def generate_files(config_file, verbose=False, info_only=False,
         print('\n**Processing')
     tree.generate(output_dir, single_chapter)
 
+    # Optionally run isort on the output
+    if config.get('isort', False):
+        print('\n**Calling isort')
+        sys.argv = ['isrot', str(output_dir)]
+        try:
+            # import only if being used
+            from isort.main import main as isort_main
+            isort_main()
+        except SystemExit:
+            # black calls quit(), ignore it
+            pass
+
     # Optionally run black on the output
     if config.get('black', False):
         print('\n**Calling black')

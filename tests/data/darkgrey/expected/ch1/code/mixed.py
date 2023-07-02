@@ -1,4 +1,5 @@
-# This file will be processed by black after juli is done with it
+# This file will be processed by isort and black after juli is done with it
+from sys import argv, base_prefix
 
 numbers = [
     1,

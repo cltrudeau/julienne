@@ -1,6 +1,14 @@
+0.8.1
+=====
+
+* 2023/07/02
+* Add ability to call isort on generated content
+
+
 0.8
 ===
 
+* 2023/05/22
 * Add ability to write a comment not included in the output code
 
 
@@ -19,13 +27,14 @@ properly
 0.7.1
 =====
 
+* 2023/05/17
 * Now supports nested markers
 
 
 0.7.0
 =====
 
-* Add "#@@" tag, allowing you to comment out code in a single line 
+* Add "#@@" tag, allowing you to comment out code in a single line
 * Add ability to call black on generated output
 * Add ability to remove the output directory before generating it
 
