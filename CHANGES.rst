@@ -1,3 +1,11 @@
+0.8.2
+=====
+
+* 2023/11/21
+* Minor changes to the docs
+* Really just building this so I can test my PyPI 2FA
+
+
 0.8.1
 =====
 
