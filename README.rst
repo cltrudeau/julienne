@@ -18,7 +18,7 @@ project will generate a separate copy of each version of your code.
 
 The need for julienne popped up for me in several projects, but it was in
 writing my book that I finally got around to building the tool. The sample
-code in [Django In Action](https://github.com/cltrudeau/django-in-action) was
+code in `Django In Action <https://github.com/cltrudeau/django-in-action>` was
 one long project, added to in each section. Julienne allowed me to create 45
 step-wise points, giving the reader snapshots of progress they compare their
 own code against.
