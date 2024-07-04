@@ -136,13 +136,13 @@ def parse_marker(text, line_no):
     try:
         jtype = text[0]
     except:
-        error = (f"No marker type after '@' in line {line_no}, must be one of"
+        error = (f"No marker type after '@' in line {line_no + 1}, must be one of"
             ",".join(ALL_JTYPES) )
         raise ValueError
 
     if jtype not in ALL_JTYPES:
-        error = (f"Unknown marker type on line {line_no}, *{text}*, must be"
-            "one of '")
+        error = (f"Unknown marker type on line {line_no + 1}, *{text}*, must be"
+            " one of '")
         error += ",".join(ALL_JTYPES) + "'"
         raise ValueError(error)
 

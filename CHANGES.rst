@@ -1,3 +1,8 @@
+???
+
+* fixed bug where line numbers were off by one and typo in error message
+
+
 0.8.2
 =====
 
